@@ -92,7 +92,8 @@ No carro há quatro abas: **Painel**, **Desempenho**, **Turbo** e **Falhas**.
 - **Desempenho:** cronômetro de **0–100 km/h** (melhor e última), velocidade/rotação/turbo/temperatura máximas da viagem e média de km/L. Zera a cada nova conexão.
 - **Turbo:** boost atual e máximo, pressão no coletor (MAP), pressão barométrica e temperatura do intercooler.
 - **Falhas:** lê e lista os códigos ao abrir a aba.
-- As listas atualizam os valores ao vivo (cerca de uma vez por segundo). Observação do Android Auto: recarregar uma lista devolve a rolagem ao topo, então, ao rolar uma lista longa como "Todos", ela volta ao início a cada atualização — é uma limitação da interface de mídia (a única forma de atualizar a lista é recarregá-la). A tela "tocando agora" fica com título fixo para não disparar o pop-up do cluster.
+- **Painel, Desempenho e Turbo** atualizam os valores ao vivo (cerca de uma vez por segundo). A aba **Todos** fica congelada para a rolagem não voltar ao topo; ela mostra os valores do momento em que foi aberta e é atualizada ao reabrir.
+- **Gauge no player ("tocando agora"):** a capa é um mostrador desenhado ao vivo — arco do turbo (com marca do máximo e cor por faixa) e, abaixo, km/L (em destaque), velocidade, rotação e temperatura. O título fica fixo ("OBD Pulse") para não disparar o pop-up de texto do cluster; a imagem, porém, é atualizada a cada leitura, e em alguns carros isso ainda pode piscar um aviso (limitação do cluster).
 
 Limitações: a interface é de player (sem áudio), e o Android Auto trata o OBD Pulse como a fonte de mídia atual enquanto ele está aberto. Dependendo da versão do Android Auto, isso pode interferir no app de música.
 

@@ -2,8 +2,6 @@ package br.com.obdpulse.media
 
 import android.app.PendingIntent
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.media.MediaDescription
 import android.media.MediaMetadata
 import android.media.browse.MediaBrowser
@@ -12,7 +10,6 @@ import android.media.session.PlaybackState
 import android.os.Bundle
 import android.os.SystemClock
 import android.service.media.MediaBrowserService
-import androidx.core.graphics.createBitmap
 import br.com.obdpulse.ObdManager
 import br.com.obdpulse.Prefs
 import br.com.obdpulse.R
@@ -29,7 +26,7 @@ class ObdMediaService : MediaBrowserService() {
 
     private val scope = MainScope()
     private lateinit var session: MediaSession
-    private var art: Bitmap? = null
+    private val gauge = GaugeRenderer()
     private var lastRender = 0L
     private var lastChildren = 0L
     private var renderPending = false
@@ -45,7 +42,6 @@ class ObdMediaService : MediaBrowserService() {
 
     override fun onCreate() {
         super.onCreate()
-        art = renderArt()
         session = MediaSession(this, "OBD Pulse").apply {
             setCallback(callback)
             setSessionActivity(
@@ -135,20 +131,20 @@ class ObdMediaService : MediaBrowserService() {
 
     private fun render(state: ObdState) {
         lastRender = SystemClock.elapsedRealtime()
-        val nowPlaying = MediaContent.stableNowPlaying(state)
-        val signature = "${nowPlaying.title}|${nowPlaying.subtitle}|${nowPlaying.album}"
+        val data = GaugeData.from(state)
+        val signature = data.signature()
         if (signature != lastMetaSignature) {
             lastMetaSignature = signature
+            val art = gauge.render(data)
             val metadata =
                 MediaMetadata.Builder()
                     .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, MediaContent.STATUS)
-                    .putString(MediaMetadata.METADATA_KEY_TITLE, nowPlaying.title)
-                    .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, nowPlaying.title)
-                    .putString(MediaMetadata.METADATA_KEY_ARTIST, nowPlaying.subtitle)
-                    .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, nowPlaying.subtitle)
-                    .putString(MediaMetadata.METADATA_KEY_ALBUM, nowPlaying.album)
-                    .putString(MediaMetadata.METADATA_KEY_DISPLAY_DESCRIPTION, nowPlaying.album)
-                    .apply { art?.let { putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, it) } }
+                    .putString(MediaMetadata.METADATA_KEY_TITLE, TITLE)
+                    .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, TITLE)
+                    .putString(MediaMetadata.METADATA_KEY_ARTIST, data.status)
+                    .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, data.status)
+                    .putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, art)
+                    .putBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON, art)
                     .build()
             lastMetadata = metadata
             session.setMetadata(metadata)
@@ -157,9 +153,16 @@ class ObdMediaService : MediaBrowserService() {
 
         val dtcChanged = state.dtcReadCount != lastDtcReads || state.dtcLoading != lastDtcLoading
         val statusChanged = state.status != lastStatus
-        if (statusChanged || dtcChanged || lastRender - lastChildren >= CHILDREN_INTERVAL) {
+        if (statusChanged || lastRender - lastChildren >= CHILDREN_INTERVAL) {
             lastChildren = lastRender
-            for (id in MediaContent.BROWSABLE_IDS) notifyChildrenChanged(id)
+            notifyChildrenChanged(MediaContent.DASHBOARD)
+            notifyChildrenChanged(MediaContent.PERFORMANCE)
+            notifyChildrenChanged(MediaContent.TURBO)
+        }
+        if (statusChanged) notifyChildrenChanged(MediaContent.ALL)
+        if (statusChanged || dtcChanged) {
+            notifyChildrenChanged(MediaContent.ROOT)
+            notifyChildrenChanged(MediaContent.DTC)
         }
         lastStatus = state.status
         lastDtcReads = state.dtcReadCount
@@ -202,20 +205,12 @@ class ObdMediaService : MediaBrowserService() {
         return MediaBrowser.MediaItem(description, flags)
     }
 
-    private fun renderArt(): Bitmap? {
-        val drawable = getDrawable(R.drawable.ic_launcher) ?: return null
-        val bitmap = createBitmap(ART_SIZE, ART_SIZE)
-        drawable.setBounds(0, 0, ART_SIZE, ART_SIZE)
-        drawable.draw(Canvas(bitmap))
-        return bitmap
-    }
-
     private companion object {
+        const val TITLE = "OBD Pulse"
         val TRANSPORT_ACTIONS = PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or
             PlaybackState.ACTION_PLAY_FROM_MEDIA_ID or PlaybackState.ACTION_PLAY_FROM_SEARCH
         const val RENDER_INTERVAL = 1_000L
         const val CHILDREN_INTERVAL = 1_500L
-        const val ART_SIZE = 96
         const val CONTENT_STYLE_SUPPORTED = "android.media.browse.CONTENT_STYLE_SUPPORTED"
         const val CONTENT_STYLE_BROWSABLE_HINT = "android.media.browse.CONTENT_STYLE_BROWSABLE_HINT"
         const val CONTENT_STYLE_PLAYABLE_HINT = "android.media.browse.CONTENT_STYLE_PLAYABLE_HINT"
