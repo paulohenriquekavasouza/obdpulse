@@ -1,5 +1,6 @@
 package br.com.obdpulse.media
 
+import br.com.obdpulse.obd.Format
 import br.com.obdpulse.obd.Keys
 import br.com.obdpulse.obd.Labels
 import br.com.obdpulse.obd.LiveValue
@@ -13,16 +14,21 @@ data class NowPlaying(val title: String, val subtitle: String, val album: String
 object MediaContent {
     const val ROOT = "root"
     const val DASHBOARD = "dashboard"
+    const val PERFORMANCE = "performance"
+    const val TURBO = "turbo"
     const val ALL = "all"
     const val DTC = "dtc"
     const val STATUS = "status"
     const val VALUE_PREFIX = "value:"
     private const val EMPTY = "—"
 
+    val BROWSABLE_IDS = listOf(ROOT, DASHBOARD, PERFORMANCE, TURBO, ALL, DTC)
+
     fun children(parentId: String, state: ObdState, favorites: List<String>): List<MediaEntry> = when (parentId) {
         ROOT -> listOf(
             MediaEntry(DASHBOARD, "Painel", status(state), browsable = true),
-            MediaEntry(ALL, "Todos", "${state.values.size} valores", browsable = true),
+            MediaEntry(PERFORMANCE, "Desempenho", performanceSummary(state), browsable = true),
+            MediaEntry(TURBO, "Turbo", turboSummary(state), browsable = true),
             MediaEntry(DTC, "Falhas", dtcSummary(state), browsable = true),
         )
         DASHBOARD -> buildList {
@@ -30,11 +36,55 @@ object MediaContent {
             add(valueEntry(Keys.CONSUMPTION, state))
             add(MediaEntry(STATUS, "Status", status(state)))
             for (key in keys.drop(1)) add(valueEntry(key, state))
+            add(MediaEntry(ALL, "Todos os parâmetros", "${state.values.size} valores", browsable = true))
         }
+        PERFORMANCE -> performanceEntries(state)
+        TURBO -> turboEntries(state)
         ALL -> state.values.map { MediaEntry(VALUE_PREFIX + it.key, it.name, format(it)) }
         DTC -> dtcEntries(state)
         else -> emptyList()
     }
+
+    private fun performanceEntries(state: ObdState): List<MediaEntry> {
+        val trip = state.trip
+        return listOf(
+            MediaEntry("perf:0100best", "0–100 km/h (melhor)", seconds(trip.bestZeroTo100Ms)),
+            MediaEntry("perf:0100last", "0–100 km/h (última)", seconds(trip.lastZeroTo100Ms)),
+            MediaEntry("perf:vmax", "Velocidade máxima", number(trip.maxSpeed, 0, "km/h")),
+            MediaEntry("perf:rpmmax", "Rotação máxima", number(trip.maxRpm, 0, "rpm")),
+            MediaEntry("perf:boostmax", "Turbo máximo", number(trip.maxBoost, 2, "bar")),
+            MediaEntry("perf:coolmax", "Temp. do motor máxima", number(trip.maxCoolant, 0, "°C")),
+            MediaEntry("perf:avgkmpl", "Média de km/L (viagem)", number(trip.avgKmPerLiter, 1, "km/L")),
+        )
+    }
+
+    private fun turboEntries(state: ObdState): List<MediaEntry> {
+        val byKey = state.values.associateBy { it.key }
+        return listOf(
+            MediaEntry("turbo:now", "Turbo atual", format(byKey[Keys.BOOST])),
+            MediaEntry("turbo:max", "Turbo máximo", number(state.trip.maxBoost, 2, "bar")),
+            MediaEntry("turbo:map", "Pressão no coletor (MAP)", format(byKey["0B"])),
+            MediaEntry("turbo:baro", "Pressão barométrica", format(byKey["33"])),
+            MediaEntry("turbo:intake", "Temp. do intercooler", format(byKey["77"])),
+        )
+    }
+
+    private fun performanceSummary(state: ObdState): String {
+        val best = seconds(state.trip.bestZeroTo100Ms)
+        val vmax = number(state.trip.maxSpeed, 0, "km/h")
+        return "0–100: $best · Vmáx: $vmax"
+    }
+
+    private fun turboSummary(state: ObdState): String {
+        val now = format(state.values.firstOrNull { it.key == Keys.BOOST })
+        val max = number(state.trip.maxBoost, 2, "bar")
+        return "Atual: $now · Máx: $max"
+    }
+
+    private fun seconds(ms: Long?): String = if (ms == null) EMPTY else "${Format.number(ms / 1000.0, 1)} s"
+
+    private fun number(value: Double?, decimals: Int, unit: String): String =
+        if (value == null) EMPTY else "${Format.number(value, decimals)} $unit"
 
     fun nowPlaying(state: ObdState, favorites: List<String>, focus: String?): NowPlaying {
         if (state.status != ObdStatus.CONNECTED) return NowPlaying("OBD Pulse", status(state), "")

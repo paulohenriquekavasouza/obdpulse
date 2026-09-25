@@ -6,6 +6,7 @@ import br.com.obdpulse.obd.Keys
 import br.com.obdpulse.obd.LiveValue
 import br.com.obdpulse.obd.ObdState
 import br.com.obdpulse.obd.ObdStatus
+import br.com.obdpulse.obd.TripStats
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -24,9 +25,9 @@ class MediaContentTest {
     )
 
     @Test
-    fun rootOnlyHasBrowsableTabs() {
+    fun rootHasFourBrowsableTabs() {
         val root = MediaContent.children(MediaContent.ROOT, connected, favorites)
-        assertEquals(listOf("Painel", "Todos", "Falhas"), root.map { it.title })
+        assertEquals(listOf("Painel", "Desempenho", "Turbo", "Falhas"), root.map { it.title })
         assertTrue(root.all { it.browsable })
         assertTrue(root.size <= 4)
     }
@@ -35,12 +36,13 @@ class MediaContentTest {
     fun dashboardPutsConsumptionFirstThenStatusAndFavorites() {
         val dashboard = MediaContent.children(MediaContent.DASHBOARD, connected, favorites)
         assertEquals(
-            listOf("value:${Keys.CONSUMPTION}", "status", "value:BOOST", "value:0C", "value:0D"),
+            listOf("value:${Keys.CONSUMPTION}", "status", "value:BOOST", "value:0C", "value:0D", MediaContent.ALL),
             dashboard.map { it.id },
         )
         assertEquals("Consumo em km/L", dashboard[0].title)
         assertEquals("0,85 bar", dashboard[2].subtitle)
-        assertTrue(dashboard.none { it.browsable })
+        assertTrue(dashboard.dropLast(1).none { it.browsable })
+        assertTrue(dashboard.last().browsable)
     }
 
     @Test
@@ -48,8 +50,49 @@ class MediaContentTest {
         val dashboard = MediaContent.children(MediaContent.DASHBOARD, ObdState(), favorites)
         assertEquals("value:${Keys.CONSUMPTION}", dashboard[0].id)
         assertEquals("status", dashboard[1].id)
-        assertEquals(6, dashboard.size)
+        assertEquals(MediaContent.ALL, dashboard.last().id)
+        assertEquals(7, dashboard.size)
         assertEquals("—", dashboard[0].subtitle)
+    }
+
+    @Test
+    fun performanceTabShowsTripStats() {
+        val state = connected.copy(
+            trip = TripStats(
+                maxBoost = 1.32,
+                maxRpm = 6480.0,
+                maxSpeed = 187.0,
+                maxCoolant = 98.0,
+                avgKmPerLiter = 9.4,
+                bestZeroTo100Ms = 8230,
+                lastZeroTo100Ms = 8730,
+            ),
+        )
+        val entries = MediaContent.children(MediaContent.PERFORMANCE, state, favorites).associate { it.title to it.subtitle }
+        assertEquals("8,2 s", entries["0–100 km/h (melhor)"])
+        assertEquals("8,7 s", entries["0–100 km/h (última)"])
+        assertEquals("187 km/h", entries["Velocidade máxima"])
+        assertEquals("6480 rpm", entries["Rotação máxima"])
+        assertEquals("1,32 bar", entries["Turbo máximo"])
+        assertEquals("9,4 km/L", entries["Média de km/L (viagem)"])
+    }
+
+    @Test
+    fun performanceTabShowsDashesWhenEmpty() {
+        val entries = MediaContent.children(MediaContent.PERFORMANCE, connected, favorites)
+        assertEquals("—", entries.first { it.title == "0–100 km/h (melhor)" }.subtitle)
+    }
+
+    @Test
+    fun turboTabShowsCurrentAndMax() {
+        val state = connected.copy(
+            values = connected.values + LiveValue("0B", "Pressão no coletor (MAP)", 210.0, "210", "kPa", 5),
+            trip = TripStats(maxBoost = 1.32),
+        )
+        val entries = MediaContent.children(MediaContent.TURBO, state, favorites).associate { it.title to it.subtitle }
+        assertEquals("0,85 bar", entries["Turbo atual"])
+        assertEquals("1,32 bar", entries["Turbo máximo"])
+        assertEquals("210 kPa", entries["Pressão no coletor (MAP)"])
     }
 
     @Test

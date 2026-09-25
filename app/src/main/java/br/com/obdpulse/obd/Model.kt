@@ -29,6 +29,17 @@ data class EcuInfo(val header: String, val name: String?, val pids: List<Int>) {
 
 data class RawPid(val ecu: String, val pid: Int, val hex: String)
 
+data class TripStats(
+    val maxBoost: Double? = null,
+    val maxRpm: Double? = null,
+    val maxSpeed: Double? = null,
+    val maxCoolant: Double? = null,
+    val maxIntake: Double? = null,
+    val avgKmPerLiter: Double? = null,
+    val bestZeroTo100Ms: Long? = null,
+    val lastZeroTo100Ms: Long? = null,
+)
+
 data class ObdState(
     val status: ObdStatus = ObdStatus.DISCONNECTED,
     val message: String? = null,
@@ -45,6 +56,7 @@ data class ObdState(
     val dtcReadCount: Int = 0,
     val undecoded: List<RawPid> = emptyList(),
     val rawReplies: Map<String, String> = emptyMap(),
+    val trip: TripStats = TripStats(),
 ) {
     val isActive: Boolean
         get() = status == ObdStatus.CONNECTING || status == ObdStatus.INITIALIZING || status == ObdStatus.CONNECTED

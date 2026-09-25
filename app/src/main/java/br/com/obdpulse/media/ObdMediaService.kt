@@ -31,12 +31,12 @@ class ObdMediaService : MediaBrowserService() {
     private lateinit var session: MediaSession
     private var art: Bitmap? = null
     private var lastRender = 0L
-    private var lastChildren = 0L
     private var renderPending = false
     private var lastStatus: ObdStatus? = null
     private var lastDtcReads = -1
     private var lastDtcLoading = false
     private var lastMetaSignature: String? = null
+    private var lastValueKeys: List<String> = emptyList()
 
     internal var lastPlaybackState: PlaybackState? = null
         private set
@@ -156,16 +156,23 @@ class ObdMediaService : MediaBrowserService() {
         publish(playbackState(state))
 
         val dtcChanged = state.dtcReadCount != lastDtcReads || state.dtcLoading != lastDtcLoading
-        if (dtcChanged || state.status != lastStatus || lastRender - lastChildren >= CHILDREN_INTERVAL) {
-            lastChildren = lastRender
-            notifyChildrenChanged(MediaContent.ROOT)
+        val statusChanged = state.status != lastStatus
+        val keys = state.values.map { it.key }
+        val keysChanged = keys != lastValueKeys
+        if (statusChanged || keysChanged) {
             notifyChildrenChanged(MediaContent.DASHBOARD)
+            notifyChildrenChanged(MediaContent.PERFORMANCE)
+            notifyChildrenChanged(MediaContent.TURBO)
             notifyChildrenChanged(MediaContent.ALL)
-            if (dtcChanged || state.status != lastStatus) notifyChildrenChanged(MediaContent.DTC)
+        }
+        if (statusChanged || dtcChanged) {
+            notifyChildrenChanged(MediaContent.ROOT)
+            notifyChildrenChanged(MediaContent.DTC)
         }
         lastStatus = state.status
         lastDtcReads = state.dtcReadCount
         lastDtcLoading = state.dtcLoading
+        lastValueKeys = keys
     }
 
     private fun publish(playback: PlaybackState) {
@@ -216,7 +223,6 @@ class ObdMediaService : MediaBrowserService() {
         val TRANSPORT_ACTIONS = PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or
             PlaybackState.ACTION_PLAY_FROM_MEDIA_ID or PlaybackState.ACTION_PLAY_FROM_SEARCH
         const val RENDER_INTERVAL = 1_000L
-        const val CHILDREN_INTERVAL = 2_000L
         const val ART_SIZE = 96
         const val CONTENT_STYLE_SUPPORTED = "android.media.browse.CONTENT_STYLE_SUPPORTED"
         const val CONTENT_STYLE_BROWSABLE_HINT = "android.media.browse.CONTENT_STYLE_BROWSABLE_HINT"

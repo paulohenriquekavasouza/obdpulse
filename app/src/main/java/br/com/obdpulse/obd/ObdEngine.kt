@@ -12,7 +12,12 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.yield
 
-class ObdEngine(private val elm: Elm327) {
+class ObdEngine(
+    private val elm: Elm327,
+    private val nowMs: () -> Long = { System.nanoTime() / 1_000_000 },
+) {
+
+    private val trip = TripTracker()
 
     private val _state = MutableStateFlow(ObdState(status = ObdStatus.INITIALIZING))
     val state: StateFlow<ObdState> = _state.asStateFlow()
@@ -108,7 +113,8 @@ class ObdEngine(private val elm: Elm327) {
                 }
             }
             updateDerived()
-            _state.update { it.copy(values = values.values.sortedBy(LiveValue::priority)) }
+            val stats = trip.onSample(nowMs(), values)
+            _state.update { it.copy(values = values.values.sortedBy(LiveValue::priority), trip = stats) }
             cycle++
             if (plan.isEmpty()) delay(IDLE_DELAY) else yield()
         }
