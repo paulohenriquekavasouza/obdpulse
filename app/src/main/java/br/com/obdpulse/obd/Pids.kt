@@ -155,8 +155,8 @@ object Pids {
     private val order: Map<String, Int> = all.withIndex().associate { (index, def) -> def.key to (index + 1) * 10 }
 
     fun priority(key: String): Int = when (key) {
-        Keys.BOOST -> 0
-        Keys.CONSUMPTION -> priority("5E") + 5
+        Keys.CONSUMPTION -> -20
+        Keys.BOOST -> -10
         Keys.BATTERY -> priority("2F") + 5
         else -> order[key] ?: Int.MAX_VALUE
     }

@@ -88,12 +88,13 @@ A opção "Fontes desconhecidas" do Android Auto vale para apps de mídia, entã
 
 No carro:
 - **Play** conecta ao leitor, e **Pause** desconecta. A linha **Status** da aba Painel também alterna a conexão. A barra de transporte tem só play/pause, sem outros botões.
-- A aba **Painel** mostra os favoritos (★), a aba **Todos** mostra todos os valores e a aba **Falhas** lê e lista os códigos.
-- Tocar num valor coloca esse valor em destaque na tela "tocando agora". As falhas são lidas ao abrir a aba **Falhas**.
-- Por voz: "Ok Google, tocar turbo no OBD Pulse" conecta e destaca o turbo. Funciona com qualquer nome de parâmetro.
+- A aba **Painel** sempre traz o **Consumo em km/L** como primeira informação, seguido do Status e dos favoritos (★). A aba **Todos** mostra todos os valores (km/L também em primeiro) e a aba **Falhas** lê e lista os códigos.
+- As falhas são lidas ao abrir a aba **Falhas**.
 - A tela atualiza até uma vez por segundo, e as listas a cada 2 segundos.
 
 Limitações: a interface é de player (sem áudio), e o Android Auto trata o OBD Pulse como a fonte de mídia atual enquanto ele está aberto. Dependendo da versão do Android Auto, isso pode interferir no app de música.
+
+Sobre o pop-up "tocando agora" no cluster: o painel do carro mostra um aviso sempre que o título dos metadados de mídia muda. Nesta branch, os metadados ficam fixos ("OBD Pulse" e o status da conexão) e só mudam ao conectar ou desconectar, então o pop-up deixa de aparecer a cada leitura. Em troca, a linha "tocando agora" não mostra mais os valores ao vivo nem o valor em destaque ao tocar num item; os valores ao vivo continuam nas abas Painel e Todos, que atualizam sem gerar o pop-up. Não há como manter os valores ao vivo no "tocando agora" sem reativar o pop-up, porque ele é uma reação do próprio cluster à troca de metadados.
 
 ### Interface de painel (Google Play)
 
