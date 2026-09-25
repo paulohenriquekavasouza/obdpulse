@@ -44,6 +44,12 @@ class ObdEngineTest {
         }
     }
 
+    private fun nextObdCommand(log: List<String>, after: String): String? {
+        val index = log.indexOf(after)
+        if (index < 0) return null
+        return log.drop(index + 1).firstOrNull { !it.startsWith("AT") }
+    }
+
     @Test
     fun initializeDiscoversVehicle() = runBlocking {
         val car = FakeCar()
@@ -57,8 +63,8 @@ class ObdEngineTest {
         assertEquals(car.vin, state.vin)
         assertEquals(listOf("7E8", "7E9"), state.ecus.map { it.header })
         assertEquals("ECM-EngineControl", state.ecus[0].name)
-        assertEquals(11, state.ecus[0].supportedPids)
-        assertEquals(listOf(0x03), state.ecus[0].undecodedPids)
+        assertEquals(12, state.ecus[0].supportedPids)
+        assertEquals(listOf(0x68), state.ecus[0].undecodedPids)
         assertEquals(1, state.ecus[1].supportedPids)
     }
 
@@ -67,6 +73,7 @@ class ObdEngineTest {
         val car = FakeCar()
         val engine = engineFor(car)
         withTimeout(10_000) { engine.initialize() }
+        val initLog = car.log.size
         val state = poll(engine, Keys.BOOST, Keys.CONSUMPTION, "46")
 
         val values = state.values.associateBy { it.key }
@@ -81,10 +88,8 @@ class ObdEngineTest {
         assertEquals(false, state.milOn)
         assertEquals(0, state.dtcCount)
 
-        val log = car.log.toList()
-        val tcmIndex = log.indexOf("ATSH7E1")
-        assertTrue(tcmIndex >= 0)
-        assertEquals("0146", log[tcmIndex + 1])
+        val log = car.log.toList().drop(initLog)
+        assertEquals("0146", nextObdCommand(log, "ATSH7E1"))
         assertTrue(log.contains("ATSH7E0"))
     }
 
@@ -115,11 +120,12 @@ class ObdEngineTest {
         assertEquals(car.vin, initialized.vin)
         assertFalse(car.log.contains("ATSP6"))
 
+        val initLog = car.log.size
         val state = poll(engine, "0C", "46")
         assertEquals("1726", state.values.first { it.key == "0C" }.text)
         assertEquals("25", state.values.first { it.key == "46" }.text)
-        val log = car.log.toList()
-        assertEquals("0146", log[log.indexOf("ATSHDA18F1") + 1])
+        val log = car.log.toList().drop(initLog)
+        assertEquals("0146", nextObdCommand(log, "ATSHDA18F1"))
         assertTrue(log.contains("ATSHDA10F1"))
     }
 
@@ -149,17 +155,70 @@ class ObdEngineTest {
     }
 
     @Test
+    fun manualFlowControlRecoversMultiFrameResponses() = runBlocking {
+        val car = FakeCar(extended = true, brokenAutoFlowControl = true)
+        val engine = engineFor(car)
+        withTimeout(20_000) { engine.initialize() }
+        withTimeout(10_000) { engine.readUndecoded() }
+        val state = engine.state.value
+
+        assertEquals(car.vin, state.vin)
+        assertEquals(listOf("ECM-EngineControl", "TCM-TransmissionCtrl"), state.ecus.map { it.name })
+        assertEquals(listOf(RawPid("18DAF110", 0x68, "01 50 00 00 00 00 00")), state.undecoded)
+        val log = car.log.toList()
+        assertTrue(log.containsAll(listOf("ATFCSH18DA10F1", "ATFCSD300000", "ATFCSM1", "ATFCSH18DA18F1")))
+    }
+
+    @Test
+    fun withoutManualFlowControlOnlyTheFirstFrameArrives() = runBlocking {
+        val car = FakeCar(extended = true, brokenAutoFlowControl = true)
+        val link = FakeLink { command -> if (command.startsWith("ATFC")) "?" else car.respond(command) }.also(links::add)
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO).also(scopes::add)
+        val elm = Elm327(link.input, link.output)
+        elm.start(scope)
+        val engine = ObdEngine(elm)
+        withTimeout(20_000) { engine.initialize() }
+        val state = engine.state.value
+
+        assertEquals(ObdStatus.CONNECTED, state.status)
+        assertEquals(null, state.vin)
+        assertEquals("automático", state.rawReplies["flow control"])
+        assertEquals("18DAF1101014490201394244", state.rawReplies["0902 DB33F1"])
+    }
+
+    @Test
+    fun extendedCarDecodesPulseSpecificPids() = runBlocking {
+        val engine = engineFor(FakeCar(extended = true))
+        withTimeout(20_000) { engine.initialize() }
+        val state = poll(engine, Keys.BOOST, "42", "77", "51", "9D", "9E", "03")
+        val values = state.values.associateBy { it.key }
+
+        assertEquals("282", values.getValue("0B").text)
+        assertEquals("1,87", values.getValue(Keys.BOOST).text)
+        assertEquals("14,56", values.getValue("42").text)
+        assertEquals(null, values[Keys.BATTERY])
+        assertEquals("37", values.getValue("77").text)
+        assertEquals("Etanol", values.getValue("51").text)
+        assertEquals("Malha fechada (sonda lambda)", values.getValue("03").text)
+        assertEquals("0,18", values.getValue("9D").text)
+        assertEquals("8,4", values.getValue("9E").text)
+        assertEquals("máximo 400 kPa", state.rawReplies["escala do MAP (PID 4F)"])
+    }
+
+    @Test
     fun diagnosticsListUndecodedPidsWithRawBytes() = runBlocking {
         val engine = engineFor(FakeCar(extended = true))
         withTimeout(20_000) { engine.initialize() }
         withTimeout(10_000) { engine.readUndecoded() }
         val state = engine.state.value
-        assertEquals(listOf(RawPid("18DAF110", 0x03, "02 00")), state.undecoded)
+        assertEquals(listOf(RawPid("18DAF110", 0x68, "01 50 00 00 00 00 00")), state.undecoded)
 
         val report = Diagnostics.report(state)
-        assertTrue(report.contains("Central 18DAF110 (ECM-EngineControl): 11 parâmetros"))
-        assertTrue(report.contains("Sem decodificação: 03"))
-        assertTrue(report.contains("18DAF110 PID 03: 02 00"))
+        assertTrue(report.contains("Central 18DAF110 (ECM-EngineControl): 18 parâmetros"))
+        assertTrue(report.contains("Sem decodificação: 68"))
+        assertTrue(report.contains("18DAF110 PID 68: 01 50 00 00 00 00 00"))
+        assertTrue(report.contains("escala do MAP (PID 4F): máximo 400 kPa"))
+        assertTrue(report.contains("flow control: manual (18DA10F1)"))
         assertTrue(report.contains("VIN: ${FakeCar().vin}"))
     }
 }

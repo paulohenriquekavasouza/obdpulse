@@ -46,7 +46,11 @@ class FakeLink(private val responder: (String) -> String) {
     fun close() = queue.put(-1)
 }
 
-class FakeCar(private val extended: Boolean = false, private val banner: String = "\r\rELM327 v2.1") {
+class FakeCar(
+    private val extended: Boolean = false,
+    private val banner: String = "\r\rELM327 v2.1",
+    private val brokenAutoFlowControl: Boolean = false,
+) {
     class Ecu(val response: String, val request: String, val name: String, val pids: Map<Int, IntArray>)
 
     private val engine = mapOf(
@@ -61,7 +65,19 @@ class FakeCar(private val extended: Boolean = false, private val banner: String 
         0x52 to intArrayOf(0xB3),
         0x5C to intArrayOf(0x82),
         0x5E to intArrayOf(0x00, 0x78),
-    )
+        0x68 to intArrayOf(0x01, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00),
+    ) + if (extended) {
+        mapOf(
+            0x42 to intArrayOf(0x38, 0xE0),
+            0x4F to intArrayOf(0x00, 0x00, 0x00, 0x28),
+            0x51 to intArrayOf(0x03),
+            0x77 to intArrayOf(0x02, 0x00, 0x4D, 0x00, 0x00),
+            0x9D to intArrayOf(0x00, 0x09, 0x00, 0x09),
+            0x9E to intArrayOf(0x00, 0x2A),
+        )
+    } else {
+        emptyMap()
+    }
     private val transmission = mapOf(0x46 to intArrayOf(0x41))
 
     val ecus = if (extended) {
@@ -82,6 +98,8 @@ class FakeCar(private val extended: Boolean = false, private val banner: String 
     private val nativeProtocol = if (extended) '7' else '6'
     private var header = functional
     private var protocol = '0'
+    private var flowControlHeader: String? = null
+    private var flowControlManual = false
 
     fun respond(command: String): String {
         log += command
@@ -100,6 +118,14 @@ class FakeCar(private val extended: Boolean = false, private val banner: String 
             }
             command.startsWith("ATSH") -> {
                 header = command.removePrefix("ATSH")
+                "OK"
+            }
+            command.startsWith("ATFCSH") -> {
+                flowControlHeader = command.removePrefix("ATFCSH")
+                "OK"
+            }
+            command.startsWith("ATFCSM") -> {
+                flowControlManual = command.last() == '1'
                 "OK"
             }
             command.startsWith("AT") -> "OK"
@@ -149,9 +175,16 @@ class FakeCar(private val extended: Boolean = false, private val banner: String 
 
     private fun hex(bytes: List<Int>) = bytes.joinToString("") { "%02X".format(it) }
 
+    private fun flowControlReaches(header: String): Boolean {
+        if (!brokenAutoFlowControl || header.length != 8) return true
+        val expected = "18DA" + header.substring(6, 8) + header.substring(4, 6)
+        return flowControlManual && flowControlHeader == expected
+    }
+
     private fun frames(header: String, payload: IntArray): List<String> {
         if (payload.size <= 7) return listOf(header + "%02X".format(payload.size) + hex(payload.toList()))
         val result = mutableListOf(header + "1%03X".format(payload.size) + hex(payload.take(6)))
+        if (!flowControlReaches(header)) return result
         var index = 6
         var sequence = 1
         while (index < payload.size) {

@@ -10,7 +10,7 @@ object Prefs {
     private const val KEY_ADDRESS = "address"
     private const val KEY_FAVORITES = "favorites"
     private const val KEY_PROTOCOL = "protocol"
-    private val DEFAULT_FAVORITES = listOf(Keys.BOOST, "0C", "0D", "05", "5C", "52", "0F", Keys.BATTERY)
+    private val DEFAULT_FAVORITES = listOf(Keys.BOOST, "0C", "0D", "05", Keys.CONSUMPTION, "77", "52", "42")
 
     private fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)

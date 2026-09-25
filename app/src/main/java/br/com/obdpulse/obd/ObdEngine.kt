@@ -25,6 +25,9 @@ class ObdEngine(private val elm: Elm327) {
     private val misses = HashMap<Int, Int>()
     private val values = LinkedHashMap<String, LiveValue>()
     private var failedCycles = 0
+    private var mapScale = 1.0
+    private var manualFlowControl = false
+    private var flowControlTarget: String? = null
 
     suspend fun initialize(preferredProtocol: Char? = null) {
         _state.update { it.copy(status = ObdStatus.INITIALIZING, message = null) }
@@ -52,8 +55,10 @@ class ObdEngine(private val elm: Elm327) {
         plan += Pids.all.filter { it.pid in owners }
 
         val raw = LinkedHashMap<String, String>()
+        owners[0x01]?.let { setupFlowControl(it, raw) }
+        readMapScale(raw)
         val vin = readVin(raw)
-        val names = readEcuNames(raw)
+        val names = readEcuNames(supported.keys, raw)
         _state.update {
             it.copy(
                 status = ObdStatus.CONNECTED,
@@ -205,18 +210,62 @@ class ObdEngine(private val elm: Elm327) {
         return null
     }
 
-    private suspend fun readEcuNames(raw: MutableMap<String, String>): Map<String, String> {
-        val text = try {
-            requestRaw(functionalHeader(), "090A", INFO_TIMEOUT)
-        } catch (e: ElmTimeoutException) {
-            raw["090A"] = NO_REPLY
-            return emptyMap()
+    private suspend fun readEcuNames(headers: Set<String>, raw: MutableMap<String, String>): Map<String, String> {
+        val names = LinkedHashMap<String, String>()
+        for (ecu in headers) {
+            val header = physicalHeader(ecu)
+            val text = try {
+                requestRaw(header, "090A", INFO_TIMEOUT)
+            } catch (e: ElmTimeoutException) {
+                raw["090A $header"] = NO_REPLY
+                continue
+            }
+            raw["090A $header"] = compact(text)
+            ElmParser.messages(text)
+                .firstOrNull { it.header == ecu && it.data.size > 3 && it.data[0] == 0x49 && it.data[1] == 0x0A }
+                ?.let { ElmParser.ascii(it.data, 3) }
+                ?.takeIf { it.isNotEmpty() }
+                ?.let { names[ecu] = it }
         }
-        raw["090A"] = compact(text)
-        return ElmParser.messages(text)
-            .filter { it.data.size > 3 && it.data[0] == 0x49 && it.data[1] == 0x0A }
-            .associate { it.header to ElmParser.ascii(it.data, 3) }
-            .filterValues { it.isNotEmpty() }
+        return names
+    }
+
+    private suspend fun setupFlowControl(ecu: String, raw: MutableMap<String, String>) {
+        if (!extendedIds) return
+        val replies = listOf("ATFCSH${fullPhysicalId(ecu)}", "ATFCSD300000", "ATFCSM1").map { command ->
+            try {
+                elm.send(command)
+            } catch (e: ElmTimeoutException) {
+                "?"
+            }
+        }
+        manualFlowControl = replies.none { it.contains('?') }
+        raw["flow control"] = if (manualFlowControl) "manual (${fullPhysicalId(ecu)})" else "automático"
+        if (manualFlowControl) {
+            flowControlTarget = ecu
+        } else {
+            try {
+                elm.send("ATFCSM0")
+            } catch (_: ElmTimeoutException) {
+            }
+        }
+    }
+
+    private suspend fun readMapScale(raw: MutableMap<String, String>) {
+        val owner = owners[0x4F] ?: return
+        val reply = try {
+            request(physicalHeader(owner), "014F")
+        } catch (e: ElmTimeoutException) {
+            return
+        }
+        val message = reply.firstOrNull {
+            it.header == owner && it.data.size >= 6 && it.data[0] == 0x41 && it.data[1] == 0x4F
+        } ?: return
+        val maxMap = message.data[5] * 10
+        if (maxMap > 0) {
+            mapScale = maxMap / 255.0
+            raw["escala do MAP (PID 4F)"] = "máximo $maxMap kPa"
+        }
     }
 
     private suspend fun readPid(def: PidDef): Boolean {
@@ -229,8 +278,10 @@ class ObdEngine(private val elm: Elm327) {
         val message = reply.firstOrNull {
             it.header == owner && it.data.size >= 2 + def.length && it.data[0] == 0x41 && it.data[1] == def.pid
         } ?: return false
-        val value = def.decode(message.data.copyOfRange(2, 2 + def.length))
-        values[def.key] = LiveValue(def.key, def.name, value, Format.number(value, def.decimals), def.unit, def.priority)
+        val bytes = message.data.copyOfRange(2, 2 + def.length)
+        val value = def.decode(bytes) * if (def.pid == 0x0B) mapScale else 1.0
+        val text = def.describe?.invoke(bytes) ?: Format.number(value, def.decimals)
+        values[def.key] = LiveValue(def.key, def.name, value, text, def.unit, def.priority)
         misses.remove(def.pid)
         return true
     }
@@ -250,6 +301,7 @@ class ObdEngine(private val elm: Elm327) {
     }
 
     private suspend fun readBattery() {
+        if (0x42 in owners) return
         val text = try {
             elm.send("ATRV")
         } catch (e: ElmTimeoutException) {
@@ -296,8 +348,23 @@ class ObdEngine(private val elm: Elm327) {
             elm.send("ATSH$header")
             currentHeader = header
         }
+        val target = physicalTarget(header)
+        if (manualFlowControl && target != null && target != flowControlTarget) {
+            elm.send("ATFCSH${fullPhysicalId(target)}")
+            flowControlTarget = target
+        }
         elm.send(command, timeoutMs)
     }
+
+    private fun physicalTarget(header: String?): String? =
+        if (header != null && header.length == 6 && header.startsWith("DA")) {
+            "18DA" + header.substring(4, 6) + header.substring(2, 4)
+        } else {
+            null
+        }
+
+    private fun fullPhysicalId(responseHeader: String): String =
+        "18DA" + responseHeader.substring(6, 8) + responseHeader.substring(4, 6)
 
     private fun functionalHeader(): String = if (extendedIds) FUNCTIONAL_HEADER_29 else FUNCTIONAL_HEADER_11
 

@@ -6,7 +6,9 @@ import android.app.Activity
 import android.bluetooth.BluetoothManager
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.provider.MediaStore
 import android.os.Build
 import android.os.Bundle
 import android.widget.ArrayAdapter
@@ -68,6 +70,18 @@ class MainActivity : Activity() {
         copyDiagnostics.setOnClickListener { copyDiagnostics() }
         findViewById<Button>(R.id.refresh).setOnClickListener { loadDevices() }
         ensurePermissions()
+        handleSearch(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleSearch(intent)
+    }
+
+    private fun handleSearch(intent: Intent?) {
+        if (intent?.action != MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH) return
+        if (ObdManager.state.value.isActive) return
+        Prefs.address(this)?.let { ObdService.start(this, it) }
     }
 
     override fun onStart() {

@@ -8,7 +8,7 @@ O app é **somente leitura**: não apaga falhas nem grava nada nas centrais.
 
 | Grupo | Dados | Serviço OBD |
 |---|---|---|
-| Tempo real | rotação, velocidade, pressão no coletor (MAP), temperaturas (motor, óleo, ar admitido, ambiente, catalisadores), % de etanol, nível de combustível, carga do motor, borboleta, pedal do acelerador, avanço de ignição, ponto de injeção, MAF, consumo instantâneo, torque, lambda e sondas, correções de combustível, pressão do rail, sistema do cânister, pressão barométrica, tensão da central, hodômetro e contadores | Modo 01 |
+| Tempo real | rotação, velocidade, pressão no coletor (MAP), temperaturas (motor, óleo, ar admitido, ar no intercooler, ambiente, catalisadores), % de etanol, nível de combustível, carga do motor, borboleta, pedal do acelerador, avanço de ignição, ponto de injeção, MAF, consumo instantâneo, vazão de combustível e de gases de escape, torque, lambda e sondas, correções de combustível, estado da malha de combustível, pressão do rail, sistema do cânister, pressão barométrica, tensão da bateria, hodômetro, contadores, tipo de combustível e norma OBD | Modo 01 |
 | Calculado | pressão do turbo = MAP − pressão barométrica (em bar); consumo em km/L = velocidade ÷ consumo instantâneo | — |
 | Falhas | códigos armazenados, pendentes e permanentes; estado da luz de injeção (MIL) | Modos 03, 07, 0A e PID 01 |
 | Identificação | chassi (VIN) e nome de cada central | Modo 09 |
@@ -19,6 +19,11 @@ Na conexão, o app pergunta a cada central quais parâmetros ela suporta e só c
 O botão **Copiar diagnóstico** copia um relatório com o leitor, o protocolo, os parâmetros suportados por central, os valores brutos dos que o app ainda não decodifica e os valores atuais. Esse relatório serve para acrescentar novos parâmetros ao catálogo.
 
 Funciona com CAN de 11 e de 29 bits (o Pulse usa 29 bits). O protocolo detectado fica salvo, e as conexões seguintes começam por ele.
+
+Detalhes de leitura:
+- **Escala do MAP:** quando a central informa o PID 4F, o MAP usa a faixa máxima declarada. O Pulse declara 400 kPa, em vez dos 255 kPa padrão, conforme a SAE J1979. A pressão do turbo é calculada sobre esse valor.
+- **Tensão da bateria:** quando a central informa o PID 42, o app usa esse valor e não o do leitor (a medição de clones do ELM327 costuma ser imprecisa).
+- **Respostas longas em CAN 29 bits:** chassi (VIN), nome das centrais e alguns PIDs ocupam mais de um quadro. O app configura o flow control manualmente (`ATFCSH`/`ATFCSD`/`ATFCSM1`) porque leitores clones costumam falhar no modo automático.
 
 **Não disponível:** dados proprietários da Stellantis, como temperatura do câmbio, marcha engatada, pressão dos pneus e vida útil do óleo. Eles exigem identificadores do fabricante que não são públicos.
 
@@ -35,11 +40,12 @@ app/src/main/java/br/com/obdpulse/
 ├── bt/         conexão Bluetooth SPP com o leitor
 ├── service/    serviço em primeiro plano que mantém a conexão ativa
 ├── ui/         tela do celular
-├── car/        telas do Android Auto
+├── car/        telas do Android Auto (Car App Library)
+├── media/      interface de mídia do Android Auto (MediaBrowserService)
 ├── ObdManager.kt
 └── Prefs.kt
 app/src/test/   testes do protocolo (simulador de ELM327 com duas centrais, motor e câmbio)
-                e das telas do Android Auto (Robolectric + app-testing)
+                e das telas e da interface de mídia do Android Auto (Robolectric)
 ```
 
 ## Como compilar
@@ -64,7 +70,34 @@ Versões: AGP 8.13.2, Kotlin 2.2.21, Car App Library 1.7.0, Gradle 8.14.5, compi
 
 ## Android Auto
 
-O Android Auto só lista apps feitos com a Car App Library quando eles são instalados por uma fonte confiável do Google Play. A opção "Fontes desconhecidas" das configurações de desenvolvedor do Android Auto **não vale** para esse tipo de app: ela só se aplica a apps de mídia, de mensagens e "parked". Instalado a partir do APK, o app funciona no celular, mas não aparece no carro.
+O app tem duas interfaces para o carro:
+
+| Interface | Como instalar | Aparência |
+|---|---|---|
+| **Mídia** | APK + "Fontes desconhecidas" no Android Auto | Como um player: abas Painel, Todos e Falhas, e os valores em destaque na tela "tocando agora" |
+| **Painel (Car App Library)** | Somente pelo Google Play (Internal App Sharing) | Lista própria com status, favoritos e botão Falhas |
+
+### Interface de mídia (APK)
+
+A opção "Fontes desconhecidas" do Android Auto vale para apps de mídia, então esta interface funciona com o APK:
+
+1. Abra as configurações do Android Auto no celular e toque 10 vezes em **Versão** para ativar o modo desenvolvedor.
+2. No menu ⋮, abra **Configurações do desenvolvedor** e ative **Fontes desconhecidas**.
+3. Escolha o leitor no app do celular uma vez.
+4. Conecte o celular ao carro e abra o **OBD Pulse** na lista de apps de mídia.
+
+No carro:
+- **Play** conecta ao leitor, e **Stop** desconecta. A linha **Status** da aba Painel também alterna a conexão.
+- A aba **Painel** mostra os favoritos (★), a aba **Todos** mostra todos os valores e a aba **Falhas** lê e lista os códigos.
+- Tocar num valor coloca esse valor em destaque na tela "tocando agora". O botão de ação personalizada **Falhas** relê os códigos.
+- Por voz: "Ok Google, tocar turbo no OBD Pulse" conecta e destaca o turbo. Funciona com qualquer nome de parâmetro.
+- A tela atualiza até uma vez por segundo, e as listas a cada 2 segundos.
+
+Limitações: a interface é de player (sem áudio), e o Android Auto trata o OBD Pulse como a fonte de mídia atual enquanto ele está aberto. Dependendo da versão do Android Auto, isso pode interferir no app de música.
+
+### Interface de painel (Google Play)
+
+O Android Auto só lista apps feitos com a Car App Library quando eles são instalados por uma fonte confiável do Google Play. A opção "Fontes desconhecidas" **não vale** para esse tipo de app. Se o app for instalado pelo Google Play, as duas interfaces aparecem no carro.
 
 O caminho sem publicar o app é o **Internal App Sharing** do Google Play: sem revisão, com build assinada por qualquer chave e link válido por 60 dias.
 
@@ -78,7 +111,7 @@ O caminho sem publicar o app é o **Internal App Sharing** do Google Play: sem r
 
 A partir de 30/09/2026, o Android passa a exigir, no Brasil, desenvolvedor verificado para instalar APKs fora das lojas. Para um APK de desenvolvedor não registrado, é preciso usar o `adb` ou o fluxo avançado do sistema. A instalação pelo Google Play não é afetada.
 
-Na tela do carro:
+Na tela de painel:
 - A primeira linha mostra o status. Toque nela para conectar ou desconectar, usando o leitor escolhido no celular.
 - As linhas seguintes mostram os parâmetros marcados com ★, na ordem em que foram marcados.
 - O botão **Falhas** lê e lista os códigos de falha.
