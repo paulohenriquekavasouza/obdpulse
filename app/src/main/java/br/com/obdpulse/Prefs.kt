@@ -9,6 +9,7 @@ object Prefs {
     private const val FILE = "obd_pulse"
     private const val KEY_ADDRESS = "address"
     private const val KEY_FAVORITES = "favorites"
+    private const val KEY_PROTOCOL = "protocol"
     private val DEFAULT_FAVORITES = listOf(Keys.BOOST, "0C", "0D", "05", "5C", "52", "0F", Keys.BATTERY)
 
     private fun prefs(context: Context): SharedPreferences =
@@ -18,6 +19,12 @@ object Prefs {
 
     fun saveAddress(context: Context, address: String) {
         prefs(context).edit { putString(KEY_ADDRESS, address) }
+    }
+
+    fun protocol(context: Context): Char? = prefs(context).getString(KEY_PROTOCOL, null)?.firstOrNull()
+
+    fun saveProtocol(context: Context, protocol: Char) {
+        prefs(context).edit { putString(KEY_PROTOCOL, protocol.toString()) }
     }
 
     fun favorites(context: Context): List<String> =

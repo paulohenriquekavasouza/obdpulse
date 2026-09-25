@@ -4,6 +4,8 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.bluetooth.BluetoothManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -43,6 +45,7 @@ class MainActivity : Activity() {
     private lateinit var devices: Spinner
     private lateinit var connect: Button
     private lateinit var readDtc: Button
+    private lateinit var copyDiagnostics: Button
     private lateinit var info: TextView
     private lateinit var dtc: TextView
     private lateinit var valuesContainer: LinearLayout
@@ -54,6 +57,7 @@ class MainActivity : Activity() {
         devices = findViewById(R.id.devices)
         connect = findViewById(R.id.connect)
         readDtc = findViewById(R.id.read_dtc)
+        copyDiagnostics = findViewById(R.id.copy_diagnostics)
         info = findViewById(R.id.info)
         dtc = findViewById(R.id.dtc)
         valuesContainer = findViewById(R.id.values)
@@ -61,6 +65,7 @@ class MainActivity : Activity() {
 
         connect.setOnClickListener { toggleConnection() }
         readDtc.setOnClickListener { ObdManager.requestDtcs() }
+        copyDiagnostics.setOnClickListener { copyDiagnostics() }
         findViewById<Button>(R.id.refresh).setOnClickListener { loadDevices() }
         ensurePermissions()
     }
@@ -141,20 +146,42 @@ class MainActivity : Activity() {
         ObdService.start(this, device.address)
     }
 
-    private fun render(state: ObdState) {
-        status.text = when (state.status) {
-            ObdStatus.DISCONNECTED -> getString(R.string.status_disconnected)
-            ObdStatus.CONNECTING -> getString(R.string.status_connecting)
-            ObdStatus.INITIALIZING -> getString(R.string.status_initializing)
-            ObdStatus.CONNECTED -> getString(R.string.status_connected)
-            ObdStatus.ERROR -> getString(R.string.status_error, state.message.orEmpty())
+    private fun copyDiagnostics() {
+        copyDiagnostics.isEnabled = false
+        copyDiagnostics.setText(R.string.diagnostics_reading)
+        scope.launch {
+            try {
+                val report = ObdManager.diagnosticsReport()
+                getSystemService(ClipboardManager::class.java)
+                    .setPrimaryClip(ClipData.newPlainText(getString(R.string.app_name), report))
+                Toast.makeText(this@MainActivity, R.string.diagnostics_copied, Toast.LENGTH_SHORT).show()
+            } finally {
+                copyDiagnostics.isEnabled = true
+                copyDiagnostics.setText(R.string.copy_diagnostics)
+            }
         }
-        connect.setText(if (state.isActive) R.string.disconnect else R.string.connect)
+    }
+
+    private fun render(state: ObdState) {
+        status.update(
+            when (state.status) {
+                ObdStatus.DISCONNECTED -> getString(R.string.status_disconnected)
+                ObdStatus.CONNECTING -> getString(R.string.status_connecting)
+                ObdStatus.INITIALIZING -> getString(R.string.status_initializing)
+                ObdStatus.CONNECTED -> getString(R.string.status_connected)
+                ObdStatus.ERROR -> getString(R.string.status_error, state.message.orEmpty())
+            },
+        )
+        connect.update(getString(if (state.isActive) R.string.disconnect else R.string.connect))
         devices.isEnabled = !state.isActive
         readDtc.isEnabled = state.status == ObdStatus.CONNECTED && !state.dtcLoading
-        info.text = infoText(state)
-        dtc.text = dtcText(state)
+        info.update(infoText(state))
+        dtc.update(dtcText(state))
         renderValues(state.values)
+    }
+
+    private fun TextView.update(value: CharSequence) {
+        if (text.toString() != value.toString()) text = value
     }
 
     private fun infoText(state: ObdState): String = buildList {
@@ -162,8 +189,11 @@ class MainActivity : Activity() {
         state.protocol?.let { add(getString(R.string.info_protocol, it)) }
         state.vin?.let { add(getString(R.string.info_vin, it)) }
         for (ecu in state.ecus) {
-            add(resources.getQuantityString(R.plurals.info_ecu, ecu.supportedPids, ecu.header, ecu.name ?: "-", ecu.supportedPids))
+            val label = ecu.label ?: getString(R.string.ecu_unknown)
+            add(resources.getQuantityString(R.plurals.info_ecu, ecu.supportedPids, ecu.header, label, ecu.supportedPids))
         }
+        val undecoded = state.ecus.sumOf { it.undecodedPids.size }
+        if (undecoded > 0) add(resources.getQuantityString(R.plurals.info_undecoded, undecoded, undecoded))
         state.milOn?.let {
             val count = state.dtcCount ?: 0
             add(resources.getQuantityString(if (it) R.plurals.info_mil_on else R.plurals.info_mil_off, count, count))
@@ -200,7 +230,9 @@ class MainActivity : Activity() {
             renderedKeys = keys
             refreshLabels()
         }
-        for (value in values) rows[value.key]?.value?.text = getString(R.string.value_with_unit, value.text, value.unit)
+        for (value in values) {
+            rows[value.key]?.value?.update(getString(R.string.value_with_unit, value.text, value.unit).trim())
+        }
     }
 
     private fun refreshLabels() {

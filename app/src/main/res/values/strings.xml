@@ -25,10 +25,19 @@
     <string name="info_protocol">Protocolo: %1$s</string>
     <string name="info_vin">Chassi (VIN): %1$s</string>
     <plurals name="info_ecu">
-        <item quantity="one">Central %1$s: %2$s · %3$d parâmetro</item>
-        <item quantity="many">Central %1$s: %2$s · %3$d parâmetros</item>
-        <item quantity="other">Central %1$s: %2$s · %3$d parâmetros</item>
+        <item quantity="one">Central %1$s (%2$s) · %3$d parâmetro</item>
+        <item quantity="many">Central %1$s (%2$s) · %3$d parâmetros</item>
+        <item quantity="other">Central %1$s (%2$s) · %3$d parâmetros</item>
     </plurals>
+    <plurals name="info_undecoded">
+        <item quantity="one">%1$d parâmetro suportado ainda sem decodificação (veja em Copiar diagnóstico)</item>
+        <item quantity="many">%1$d parâmetros suportados ainda sem decodificação (veja em Copiar diagnóstico)</item>
+        <item quantity="other">%1$d parâmetros suportados ainda sem decodificação (veja em Copiar diagnóstico)</item>
+    </plurals>
+    <string name="ecu_unknown">não identificada</string>
+    <string name="copy_diagnostics">Copiar diagnóstico</string>
+    <string name="diagnostics_reading">Lendo parâmetros…</string>
+    <string name="diagnostics_copied">Diagnóstico copiado para a área de transferência</string>
     <plurals name="info_mil_on">
         <item quantity="one">Luz de falha (MIL): acesa · %1$d código</item>
         <item quantity="many">Luz de falha (MIL): acesa · %1$d códigos</item>

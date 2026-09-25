@@ -46,49 +46,71 @@ class FakeLink(private val responder: (String) -> String) {
     fun close() = queue.put(-1)
 }
 
-class FakeCar {
+class FakeCar(private val extended: Boolean = false, private val banner: String = "\r\rELM327 v2.1") {
     class Ecu(val response: String, val request: String, val name: String, val pids: Map<Int, IntArray>)
 
-    val ecus = listOf(
-        Ecu(
-            "7E8", "7E0", "ECM-EngineControl",
-            mapOf(
-                0x01 to intArrayOf(0x00, 0x07, 0xE5, 0x00),
-                0x05 to intArrayOf(0x7B),
-                0x0B to intArrayOf(180),
-                0x0C to intArrayOf(0x1A, 0xF8),
-                0x0D to intArrayOf(60),
-                0x0F to intArrayOf(0x46),
-                0x33 to intArrayOf(95),
-                0x52 to intArrayOf(0xB3),
-                0x5C to intArrayOf(0x82),
-            ),
-        ),
-        Ecu("7E9", "7E1", "TCM-TransmissionCtrl", mapOf(0x46 to intArrayOf(0x41))),
+    private val engine = mapOf(
+        0x01 to intArrayOf(0x00, 0x07, 0xE5, 0x00),
+        0x03 to intArrayOf(0x02, 0x00),
+        0x05 to intArrayOf(0x7B),
+        0x0B to intArrayOf(180),
+        0x0C to intArrayOf(0x1A, 0xF8),
+        0x0D to intArrayOf(60),
+        0x0F to intArrayOf(0x46),
+        0x33 to intArrayOf(95),
+        0x52 to intArrayOf(0xB3),
+        0x5C to intArrayOf(0x82),
+        0x5E to intArrayOf(0x00, 0x78),
     )
+    private val transmission = mapOf(0x46 to intArrayOf(0x41))
+
+    val ecus = if (extended) {
+        listOf(
+            Ecu("18DAF110", "DA10F1", "ECM-EngineControl", engine),
+            Ecu("18DAF118", "DA18F1", "TCM-TransmissionCtrl", transmission),
+        )
+    } else {
+        listOf(
+            Ecu("7E8", "7E0", "ECM-EngineControl", engine),
+            Ecu("7E9", "7E1", "TCM-TransmissionCtrl", transmission),
+        )
+    }
 
     val vin = "9BD363A1XT1234567"
     val log: MutableList<String> = Collections.synchronizedList(mutableListOf())
-    private var header = "7DF"
+    private val functional = if (extended) "DB33F1" else "7DF"
+    private val nativeProtocol = if (extended) '7' else '6'
+    private var header = functional
+    private var protocol = '0'
 
     fun respond(command: String): String {
         log += command
         return when {
-            command == "ATZ" -> "\r\rELM327 v2.1"
-            command == "ATDP" -> "ISO 15765-4 (CAN 11/500)"
+            command == "ATZ" -> {
+                header = functional
+                banner
+            }
+            command == "ATDP" -> (if (protocol == '0') "AUTO," else "") +
+                if (extended) "ISO 15765-4 (CAN 29/500)" else "ISO 15765-4 (CAN 11/500)"
+            command == "ATDPN" -> (if (protocol == '0') "A" else "") + nativeProtocol
             command == "ATRV" -> "12.4V"
+            command.startsWith("ATSP") -> {
+                protocol = command.last()
+                "OK"
+            }
             command.startsWith("ATSH") -> {
                 header = command.removePrefix("ATSH")
                 "OK"
             }
             command.startsWith("AT") -> "OK"
+            protocol != '0' && protocol != nativeProtocol -> "NO DATA"
             else -> obd(command)
         }
     }
 
     private fun obd(command: String): String {
         val mode = command.substring(0, 2).toInt(16)
-        val targets = if (header == "7DF") ecus else ecus.filter { it.request == header }
+        val targets = if (header == functional) ecus else ecus.filter { it.request == header }
         val lines = mutableListOf<String>()
         for (ecu in targets) {
             val payload = when (mode) {
@@ -96,10 +118,10 @@ class FakeCar {
                     val pid = command.substring(2, 4).toInt(16)
                     if (pid % 0x20 == 0) supportPage(ecu, pid) else ecu.pids[pid]?.let { intArrayOf(0x41, pid) + it }
                 }
-                0x03 -> if (ecu.response == "7E8") intArrayOf(0x43, 0x02, 0x01, 0x33, 0x04, 0x20) else intArrayOf(0x43, 0x00)
+                0x03 -> if (ecu.pids === engine) intArrayOf(0x43, 0x02, 0x01, 0x33, 0x04, 0x20) else intArrayOf(0x43, 0x00)
                 0x07 -> intArrayOf(0x47, 0x00)
                 0x09 -> when (command.substring(2, 4)) {
-                    "02" -> if (ecu.response == "7E8") intArrayOf(0x49, 0x02, 0x01) + ascii(vin) else null
+                    "02" -> if (ecu.pids === engine) intArrayOf(0x49, 0x02, 0x01) + ascii(vin) else null
                     "0A" -> intArrayOf(0x49, 0x0A, 0x01) + ascii(ecu.name.padEnd(20, '\u0000'))
                     else -> null
                 }

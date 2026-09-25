@@ -67,19 +67,23 @@
                 android:text="@string/read_dtc" />
         </LinearLayout>
 
+        <Button
+            android:id="@+id/copy_diagnostics"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/copy_diagnostics" />
+
         <TextView
             android:id="@+id/info"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:textIsSelectable="true" />
+            android:layout_marginTop="12dp" />
 
         <TextView
             android:id="@+id/dtc"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textIsSelectable="true" />
+            android:layout_marginTop="8dp" />
 
         <TextView
             android:layout_width="match_parent"

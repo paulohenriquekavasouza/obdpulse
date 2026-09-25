@@ -60,7 +60,7 @@ class LiveDataScreen(carContext: CarContext) : Screen(carContext) {
             items.addItem(
                 Row.Builder()
                     .setTitle(Labels.name(key))
-                    .addText(value?.let { carContext.getString(R.string.value_with_unit, it.text, it.unit) } ?: EMPTY_VALUE)
+                    .addText(value?.let { carContext.getString(R.string.value_with_unit, it.text, it.unit).trim() } ?: EMPTY_VALUE)
                     .build(),
             )
         }

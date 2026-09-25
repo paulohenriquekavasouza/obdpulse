@@ -3,6 +3,7 @@ package br.com.obdpulse
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import br.com.obdpulse.bt.BluetoothLink
+import br.com.obdpulse.obd.Diagnostics
 import br.com.obdpulse.obd.Elm327
 import br.com.obdpulse.obd.ElmTimeoutException
 import br.com.obdpulse.obd.ObdEngine
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.IOException
 
 object ObdManager {
@@ -56,6 +58,20 @@ object ObdManager {
         return true
     }
 
+    suspend fun diagnosticsReport(): String {
+        val current = engine
+        if (current != null && current.state.value.status == ObdStatus.CONNECTED) {
+            try {
+                withContext(Dispatchers.IO) { current.readUndecoded() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+            }
+            return Diagnostics.report(current.state.value)
+        }
+        return Diagnostics.report(_state.value)
+    }
+
     private suspend fun runSession(context: Context, address: String) {
         var opened: BluetoothLink? = null
         var session: ObdEngine? = null
@@ -75,7 +91,8 @@ object ObdManager {
                 engine = current
                 launch { current.state.collect { if (isActive) _state.value = it } }
                 try {
-                    current.initialize()
+                    current.initialize(Prefs.protocol(context))
+                    current.state.value.protocolNumber?.let { Prefs.saveProtocol(context, it) }
                     current.pollLoop()
                 } finally {
                     connection.close()

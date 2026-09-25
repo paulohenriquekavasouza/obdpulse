@@ -21,13 +21,20 @@ data class DtcReport(
     val permanent: List<DtcCode>,
 )
 
-data class EcuInfo(val header: String, val name: String?, val supportedPids: Int)
+data class EcuInfo(val header: String, val name: String?, val pids: List<Int>) {
+    val supportedPids: Int get() = pids.count { it % 0x20 != 0 }
+    val undecodedPids: List<Int> get() = pids.filter { it % 0x20 != 0 && it !in Pids.handled }
+    val label: String? get() = name ?: EcuLabels.of(header)
+}
+
+data class RawPid(val ecu: String, val pid: Int, val hex: String)
 
 data class ObdState(
     val status: ObdStatus = ObdStatus.DISCONNECTED,
     val message: String? = null,
     val adapter: String? = null,
     val protocol: String? = null,
+    val protocolNumber: Char? = null,
     val vin: String? = null,
     val ecus: List<EcuInfo> = emptyList(),
     val values: List<LiveValue> = emptyList(),
@@ -36,9 +43,19 @@ data class ObdState(
     val dtcs: DtcReport? = null,
     val dtcLoading: Boolean = false,
     val dtcReadCount: Int = 0,
+    val undecoded: List<RawPid> = emptyList(),
+    val rawReplies: Map<String, String> = emptyMap(),
 ) {
     val isActive: Boolean
         get() = status == ObdStatus.CONNECTING || status == ObdStatus.INITIALIZING || status == ObdStatus.CONNECTED
+}
+
+object EcuLabels {
+    fun of(header: String): String? = when (header) {
+        "7E8", "18DAF110" -> "motor"
+        "7E9", "18DAF118" -> "câmbio"
+        else -> null
+    }
 }
 
 class ObdException(message: String) : Exception(message)
