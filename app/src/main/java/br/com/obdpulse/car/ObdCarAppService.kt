@@ -6,6 +6,7 @@ import androidx.car.app.CarAppService
 import androidx.car.app.Screen
 import androidx.car.app.Session
 import androidx.car.app.validation.HostValidator
+import br.com.obdpulse.R
 
 class ObdCarAppService : CarAppService() {
 
@@ -14,7 +15,7 @@ class ObdCarAppService : CarAppService() {
             HostValidator.ALLOW_ALL_HOSTS_VALIDATOR
         } else {
             HostValidator.Builder(applicationContext)
-                .addAllowedHosts(androidx.car.app.R.array.hosts_allowlist_sample)
+                .addAllowedHosts(R.array.car_hosts_allowlist)
                 .build()
         }
 

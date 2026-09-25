@@ -5,11 +5,13 @@ import androidx.car.app.CarContext
 import androidx.car.app.CarToast
 import androidx.car.app.Screen
 import androidx.car.app.model.Action
-import androidx.car.app.model.ActionStrip
+import androidx.car.app.model.CarColor
+import androidx.car.app.model.CarIcon
 import androidx.car.app.model.ItemList
 import androidx.car.app.model.ListTemplate
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
+import androidx.core.graphics.drawable.IconCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -58,24 +60,22 @@ class LiveDataScreen(carContext: CarContext) : Screen(carContext) {
             items.addItem(
                 Row.Builder()
                     .setTitle(Labels.name(key))
-                    .addText(value?.let { "${it.text} ${it.unit}" } ?: EMPTY_VALUE)
+                    .addText(value?.let { carContext.getString(R.string.value_with_unit, it.text, it.unit) } ?: EMPTY_VALUE)
                     .build(),
             )
         }
-        return ListTemplate.Builder()
-            .setTitle(carContext.getString(R.string.app_name))
-            .setHeaderAction(Action.APP_ICON)
-            .setSingleList(items.build())
-            .setActionStrip(
-                ActionStrip.Builder()
-                    .addAction(
-                        Action.Builder()
-                            .setTitle(carContext.getString(R.string.car_dtc))
-                            .setOnClickListener { screenManager.push(DtcScreen(carContext)) }
-                            .build(),
-                    )
+        val dtcAction = Action.Builder()
+            .setTitle(carContext.getString(R.string.car_dtc))
+            .setIcon(
+                CarIcon.Builder(IconCompat.createWithResource(carContext, R.drawable.ic_dtc))
+                    .setTint(CarColor.DEFAULT)
                     .build(),
             )
+            .setOnClickListener { screenManager.push(DtcScreen(carContext)) }
+            .build()
+        return ListTemplate.Builder()
+            .header(carContext, carContext.getString(R.string.app_name), Action.APP_ICON, dtcAction)
+            .setSingleList(items.build())
             .build()
     }
 

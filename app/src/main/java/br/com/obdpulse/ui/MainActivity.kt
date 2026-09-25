@@ -162,10 +162,11 @@ class MainActivity : Activity() {
         state.protocol?.let { add(getString(R.string.info_protocol, it)) }
         state.vin?.let { add(getString(R.string.info_vin, it)) }
         for (ecu in state.ecus) {
-            add(getString(R.string.info_ecu, ecu.header, ecu.name ?: "-", ecu.supportedPids))
+            add(resources.getQuantityString(R.plurals.info_ecu, ecu.supportedPids, ecu.header, ecu.name ?: "-", ecu.supportedPids))
         }
         state.milOn?.let {
-            add(getString(if (it) R.string.info_mil_on else R.string.info_mil_off, state.dtcCount ?: 0))
+            val count = state.dtcCount ?: 0
+            add(resources.getQuantityString(if (it) R.plurals.info_mil_on else R.plurals.info_mil_off, count, count))
         }
         if (state.status == ObdStatus.CONNECTED) state.message?.let { add(it) }
     }.joinToString("\n")
@@ -199,7 +200,7 @@ class MainActivity : Activity() {
             renderedKeys = keys
             refreshLabels()
         }
-        for (value in values) rows[value.key]?.value?.text = "${value.text} ${value.unit}"
+        for (value in values) rows[value.key]?.value?.text = getString(R.string.value_with_unit, value.text, value.unit)
     }
 
     private fun refreshLabels() {

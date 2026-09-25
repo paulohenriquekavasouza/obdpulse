@@ -34,7 +34,8 @@ app/src/main/java/br/com/obdpulse/
 ├── car/        telas do Android Auto
 ├── ObdManager.kt
 └── Prefs.kt
-app/src/test/   testes com um simulador de ELM327 e de duas centrais (motor e câmbio)
+app/src/test/   testes do protocolo (simulador de ELM327 com duas centrais, motor e câmbio)
+                e das telas do Android Auto (Robolectric + app-testing)
 ```
 
 ## Como compilar
@@ -45,10 +46,10 @@ Requisitos: Android Studio recente (ou JDK 17+ com Android SDK 36).
 - **Linha de comando:**
   ```
   ./gradlew assembleDebug      # gera app/build/outputs/apk/debug/app-debug.apk
-  ./gradlew test               # roda os testes do protocolo
+  ./gradlew test               # roda os testes do protocolo e das telas do Android Auto
   ```
 
-Versões: AGP 8.11.1, Kotlin 2.2.21, Car App Library 1.4.0 e Gradle 8.14.3. O Android Studio pode sugerir atualizações, que podem ser aceitas.
+Versões: AGP 8.13.2, Kotlin 2.2.21, Car App Library 1.7.0, Gradle 8.14.5, compileSdk/targetSdk 36 e minSdk 26.
 
 ## Primeiro uso
 
@@ -71,7 +72,7 @@ Na tela do carro:
 - O botão **Falhas** lê e lista os códigos de falha.
 - A tela atualiza no máximo uma vez por segundo, e o número de linhas é limitado pelo Android Auto (normalmente 6).
 
-O app usa a categoria IoT do Android Auto. É um app para uso pessoal, instalado fora da Play Store.
+O app usa a categoria IoT do Android Auto. É um app para uso pessoal, instalado fora da Play Store. Em hosts com Car API 7 ou superior o cabeçalho usa o componente `Header`; em hosts mais antigos, o formato anterior.
 
 ## Limitações
 

@@ -44,8 +44,7 @@ class DtcScreen(carContext: CarContext) : Screen(carContext) {
 
     override fun onGetTemplate(): Template {
         val builder = ListTemplate.Builder()
-            .setTitle(carContext.getString(R.string.dtc_title))
-            .setHeaderAction(Action.BACK)
+            .header(carContext, carContext.getString(R.string.dtc_title), Action.BACK)
         if (!done) return builder.setLoading(true).build()
 
         val report = state.dtcs

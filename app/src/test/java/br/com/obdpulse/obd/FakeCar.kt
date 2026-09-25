@@ -20,7 +20,8 @@ class FakeLink(private val responder: (String) -> String) {
             while (count < len) {
                 val next = queue.peek() ?: break
                 if (next < 0) break
-                b[off + count] = queue.poll().toByte()
+                queue.poll()
+                b[off + count] = next.toByte()
                 count++
             }
             return count
