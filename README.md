@@ -87,9 +87,9 @@ A opção "Fontes desconhecidas" do Android Auto vale para apps de mídia, entã
 4. Conecte o celular ao carro e abra o **OBD Pulse** na lista de apps de mídia.
 
 No carro:
-- **Play** conecta ao leitor, e **Stop** desconecta. A linha **Status** da aba Painel também alterna a conexão.
+- **Play** conecta ao leitor, e **Pause** desconecta. A linha **Status** da aba Painel também alterna a conexão. A barra de transporte tem só play/pause, sem outros botões.
 - A aba **Painel** mostra os favoritos (★), a aba **Todos** mostra todos os valores e a aba **Falhas** lê e lista os códigos.
-- Tocar num valor coloca esse valor em destaque na tela "tocando agora". O botão de ação personalizada **Falhas** relê os códigos.
+- Tocar num valor coloca esse valor em destaque na tela "tocando agora". As falhas são lidas ao abrir a aba **Falhas**.
 - Por voz: "Ok Google, tocar turbo no OBD Pulse" conecta e destaca o turbo. Funciona com qualquer nome de parâmetro.
 - A tela atualiza até uma vez por segundo, e as listas a cada 2 segundos.
 

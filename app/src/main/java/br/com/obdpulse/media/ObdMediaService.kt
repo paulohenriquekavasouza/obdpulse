@@ -90,6 +90,8 @@ class ObdMediaService : MediaBrowserService() {
     internal val callback = object : MediaSession.Callback() {
         override fun onPlay() = connect()
 
+        override fun onPause() = ObdManager.disconnect()
+
         override fun onStop() = ObdManager.disconnect()
 
         override fun onPlayFromMediaId(mediaId: String, extras: Bundle?) {
@@ -112,10 +114,6 @@ class ObdMediaService : MediaBrowserService() {
             if (!ObdManager.state.value.isActive) connect()
             render(ObdManager.state.value)
         }
-
-        override fun onCustomAction(action: String, extras: Bundle?) {
-            if (action == ACTION_READ_DTC) ObdManager.requestDtcs()
-        }
     }
 
     private fun connect() {
@@ -125,7 +123,7 @@ class ObdMediaService : MediaBrowserService() {
                 PlaybackState.Builder()
                     .setState(PlaybackState.STATE_ERROR, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 0f)
                     .setErrorMessage(getString(R.string.car_select_device))
-                    .setActions(PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PLAY_FROM_MEDIA_ID or PlaybackState.ACTION_PLAY_FROM_SEARCH)
+                    .setActions(TRANSPORT_ACTIONS)
                     .build(),
             )
             return
@@ -186,21 +184,17 @@ class ObdMediaService : MediaBrowserService() {
         when (state.status) {
             ObdStatus.CONNECTED -> builder
                 .setState(PlaybackState.STATE_PLAYING, position, 0f)
-                .setActions(PlaybackState.ACTION_STOP or PlaybackState.ACTION_PLAY_FROM_MEDIA_ID or PlaybackState.ACTION_PLAY_FROM_SEARCH)
-                .addCustomAction(
-                    PlaybackState.CustomAction.Builder(ACTION_READ_DTC, getString(R.string.car_dtc), R.drawable.ic_dtc)
-                        .build(),
-                )
+                .setActions(TRANSPORT_ACTIONS)
             ObdStatus.CONNECTING, ObdStatus.INITIALIZING -> builder
                 .setState(PlaybackState.STATE_CONNECTING, position, 0f)
-                .setActions(PlaybackState.ACTION_STOP or PlaybackState.ACTION_PLAY_FROM_MEDIA_ID or PlaybackState.ACTION_PLAY_FROM_SEARCH)
+                .setActions(TRANSPORT_ACTIONS)
             ObdStatus.ERROR -> builder
                 .setState(PlaybackState.STATE_ERROR, position, 0f)
                 .setErrorMessage(state.message ?: getString(R.string.status_error, ""))
-                .setActions(PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PLAY_FROM_MEDIA_ID or PlaybackState.ACTION_PLAY_FROM_SEARCH)
+                .setActions(TRANSPORT_ACTIONS)
             ObdStatus.DISCONNECTED -> builder
-                .setState(PlaybackState.STATE_STOPPED, position, 0f)
-                .setActions(PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PLAY_FROM_MEDIA_ID or PlaybackState.ACTION_PLAY_FROM_SEARCH)
+                .setState(PlaybackState.STATE_PAUSED, position, 0f)
+                .setActions(TRANSPORT_ACTIONS)
         }
         return builder.build()
     }
@@ -224,7 +218,8 @@ class ObdMediaService : MediaBrowserService() {
     }
 
     private companion object {
-        const val ACTION_READ_DTC = "br.com.obdpulse.READ_DTC"
+        val TRANSPORT_ACTIONS = PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or
+            PlaybackState.ACTION_PLAY_FROM_MEDIA_ID or PlaybackState.ACTION_PLAY_FROM_SEARCH
         const val RENDER_INTERVAL = 1_000L
         const val CHILDREN_INTERVAL = 2_000L
         const val ART_SIZE = 96

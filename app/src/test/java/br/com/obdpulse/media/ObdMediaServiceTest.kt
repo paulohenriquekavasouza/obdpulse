@@ -21,7 +21,7 @@ import org.robolectric.annotation.Config
 class ObdMediaServiceTest {
 
     @Test
-    fun exposesListRootAndStoppedSession() {
+    fun exposesListRootAndOnlyPlayPauseTransport() {
         val service = Robolectric.buildService(ObdMediaService::class.java).create().get()
 
         val root = service.onGetRoot("com.google.android.projection.gearhead", 0, null)!!
@@ -31,8 +31,12 @@ class ObdMediaServiceTest {
         assertNull(service.onGetRoot("com.android.systemui", 0, Bundle().apply { putBoolean(BrowserRoot.EXTRA_RECENT, true) }))
 
         assertNotNull(service.sessionToken)
-        assertEquals(PlaybackState.STATE_STOPPED, service.lastPlaybackState!!.state)
-        assertTrue(service.lastPlaybackState!!.actions and PlaybackState.ACTION_PLAY != 0L)
+        val playback = service.lastPlaybackState!!
+        assertEquals(PlaybackState.STATE_PAUSED, playback.state)
+        assertTrue(playback.actions and PlaybackState.ACTION_PLAY != 0L)
+        assertTrue(playback.actions and PlaybackState.ACTION_PAUSE != 0L)
+        assertEquals(0L, playback.actions and PlaybackState.ACTION_STOP)
+        assertTrue(playback.customActions.isEmpty())
         assertEquals("OBD Pulse", service.lastMetadata!!.getString(MediaMetadata.METADATA_KEY_TITLE))
         assertNotNull(service.lastMetadata!!.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART))
     }
