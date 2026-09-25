@@ -38,6 +38,7 @@ data class TripStats(
     val avgKmPerLiter: Double? = null,
     val bestZeroTo100Ms: Long? = null,
     val lastZeroTo100Ms: Long? = null,
+    val lastSub10Ms: Long? = null,
 )
 
 data class ObdState(

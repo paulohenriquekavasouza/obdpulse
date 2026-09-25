@@ -10,6 +10,8 @@ object Prefs {
     private const val KEY_ADDRESS = "address"
     private const val KEY_FAVORITES = "favorites"
     private const val KEY_PROTOCOL = "protocol"
+    private const val KEY_CLUSTER = "cluster_metric"
+    const val CLUSTER_NONE = ""
     private val DEFAULT_FAVORITES = listOf(Keys.BOOST, "0C", "0D", "05", Keys.CONSUMPTION, "77", "52", "42")
 
     private fun prefs(context: Context): SharedPreferences =
@@ -25,6 +27,13 @@ object Prefs {
 
     fun saveProtocol(context: Context, protocol: Char) {
         prefs(context).edit { putString(KEY_PROTOCOL, protocol.toString()) }
+    }
+
+    fun clusterMetric(context: Context): String =
+        prefs(context).getString(KEY_CLUSTER, CLUSTER_NONE) ?: CLUSTER_NONE
+
+    fun saveClusterMetric(context: Context, key: String) {
+        prefs(context).edit { putString(KEY_CLUSTER, key) }
     }
 
     fun favorites(context: Context): List<String> =

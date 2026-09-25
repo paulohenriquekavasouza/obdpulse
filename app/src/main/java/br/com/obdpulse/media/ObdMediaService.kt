@@ -13,6 +13,8 @@ import android.service.media.MediaBrowserService
 import br.com.obdpulse.ObdManager
 import br.com.obdpulse.Prefs
 import br.com.obdpulse.R
+import br.com.obdpulse.obd.Format
+import br.com.obdpulse.obd.Labels
 import br.com.obdpulse.obd.ObdState
 import br.com.obdpulse.obd.ObdStatus
 import br.com.obdpulse.service.ObdService
@@ -34,6 +36,9 @@ class ObdMediaService : MediaBrowserService() {
     private var lastDtcReads = -1
     private var lastDtcLoading = false
     private var lastMetaSignature: String? = null
+    private var lastSeenSub10: Long? = null
+    private var flashText: String? = null
+    private var flashUntil = 0L
 
     internal var lastPlaybackState: PlaybackState? = null
         private set
@@ -78,7 +83,8 @@ class ObdMediaService : MediaBrowserService() {
         if (parentId == MediaContent.DTC && state.status == ObdStatus.CONNECTED && state.dtcs == null && !state.dtcLoading) {
             ObdManager.requestDtcs()
         }
-        result.sendResult(MediaContent.children(parentId, state, Prefs.favorites(this)).map(::toItem).toMutableList())
+        val children = MediaContent.children(parentId, state, Prefs.favorites(this), Prefs.clusterMetric(this))
+        result.sendResult(children.map(::toItem).toMutableList())
     }
 
     internal val callback = object : MediaSession.Callback() {
@@ -92,6 +98,12 @@ class ObdMediaService : MediaBrowserService() {
             when {
                 mediaId == MediaContent.STATUS ->
                     if (ObdManager.state.value.isActive) ObdManager.disconnect() else connect()
+                mediaId.startsWith(MediaContent.CLUSTER_PREFIX) -> {
+                    Prefs.saveClusterMetric(this@ObdMediaService, mediaId.removePrefix(MediaContent.CLUSTER_PREFIX))
+                    notifyChildrenChanged(MediaContent.CLUSTER)
+                    notifyChildrenChanged(MediaContent.DASHBOARD)
+                    render(ObdManager.state.value)
+                }
                 mediaId.startsWith(MediaContent.VALUE_PREFIX) ->
                     if (!ObdManager.state.value.isActive) connect()
                 mediaId.startsWith(MediaContent.DTC) -> ObdManager.requestDtcs()
@@ -132,15 +144,16 @@ class ObdMediaService : MediaBrowserService() {
     private fun render(state: ObdState) {
         lastRender = SystemClock.elapsedRealtime()
         val data = GaugeData.from(state)
-        val signature = data.signature()
+        val title = clusterTitle(state)
+        val signature = "$title|${data.signature()}"
         if (signature != lastMetaSignature) {
             lastMetaSignature = signature
             val art = gauge.render(data)
             val metadata =
                 MediaMetadata.Builder()
                     .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, MediaContent.STATUS)
-                    .putString(MediaMetadata.METADATA_KEY_TITLE, TITLE)
-                    .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, TITLE)
+                    .putString(MediaMetadata.METADATA_KEY_TITLE, title)
+                    .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, title)
                     .putString(MediaMetadata.METADATA_KEY_ARTIST, data.status)
                     .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, data.status)
                     .putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, art)
@@ -167,6 +180,25 @@ class ObdMediaService : MediaBrowserService() {
         lastStatus = state.status
         lastDtcReads = state.dtcReadCount
         lastDtcLoading = state.dtcLoading
+    }
+
+    private fun clusterTitle(state: ObdState): String {
+        val now = SystemClock.elapsedRealtime()
+        val sub10 = state.trip.lastSub10Ms
+        if (sub10 != null && sub10 != lastSeenSub10) {
+            flashText = "0–100: ${Format.number(sub10 / 1000.0, 1)} s"
+            flashUntil = now + FLASH_MS
+        }
+        lastSeenSub10 = sub10
+        flashText?.let { if (now < flashUntil) return it }
+
+        val metric = Prefs.clusterMetric(this)
+        if (metric.isNotBlank() && state.status == ObdStatus.CONNECTED) {
+            state.values.firstOrNull { it.key == metric }?.let {
+                return "${Labels.short(metric)} ${it.text} ${it.unit}".trim()
+            }
+        }
+        return TITLE
     }
 
     private fun publish(playback: PlaybackState) {
@@ -209,8 +241,9 @@ class ObdMediaService : MediaBrowserService() {
         const val TITLE = "OBD Pulse"
         val TRANSPORT_ACTIONS = PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or
             PlaybackState.ACTION_PLAY_FROM_MEDIA_ID or PlaybackState.ACTION_PLAY_FROM_SEARCH
-        const val RENDER_INTERVAL = 1_000L
-        const val CHILDREN_INTERVAL = 1_500L
+        const val RENDER_INTERVAL = 500L
+        const val CHILDREN_INTERVAL = 1_000L
+        const val FLASH_MS = 6_000L
         const val CONTENT_STYLE_SUPPORTED = "android.media.browse.CONTENT_STYLE_SUPPORTED"
         const val CONTENT_STYLE_BROWSABLE_HINT = "android.media.browse.CONTENT_STYLE_BROWSABLE_HINT"
         const val CONTENT_STYLE_PLAYABLE_HINT = "android.media.browse.CONTENT_STYLE_PLAYABLE_HINT"

@@ -8,6 +8,8 @@
     <string name="refresh">Atualizar</string>
     <string name="none">nenhuma</string>
     <string name="favorites_hint">Toque em um item para mostrá-lo (★) ou ocultá-lo no Android Auto.</string>
+    <string name="cluster_label">Piscar no cluster (informação mostrada no painel do carro):</string>
+    <string name="cluster_none">Nenhuma (só 0–100)</string>
 
     <string name="status_disconnected">Desconectado</string>
     <string name="status_connecting">Conectando ao leitor…</string>

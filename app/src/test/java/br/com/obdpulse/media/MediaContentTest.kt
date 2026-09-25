@@ -36,13 +36,17 @@ class MediaContentTest {
     fun dashboardPutsConsumptionFirstThenStatusAndFavorites() {
         val dashboard = MediaContent.children(MediaContent.DASHBOARD, connected, favorites)
         assertEquals(
-            listOf("value:${Keys.CONSUMPTION}", "status", "value:BOOST", "value:0C", "value:0D", MediaContent.ALL),
+            listOf(
+                "value:${Keys.CONSUMPTION}", "status", "value:BOOST", "value:0C", "value:0D",
+                MediaContent.ALL, MediaContent.CLUSTER,
+            ),
             dashboard.map { it.id },
         )
         assertEquals("Consumo em km/L", dashboard[0].title)
         assertEquals("0,85 bar", dashboard[2].subtitle)
-        assertTrue(dashboard.dropLast(1).none { it.browsable })
-        assertTrue(dashboard.last().browsable)
+        assertTrue(dashboard[0].browsable.not())
+        assertTrue(dashboard.first { it.id == MediaContent.ALL }.browsable)
+        assertTrue(dashboard.first { it.id == MediaContent.CLUSTER }.browsable)
     }
 
     @Test
@@ -50,9 +54,31 @@ class MediaContentTest {
         val dashboard = MediaContent.children(MediaContent.DASHBOARD, ObdState(), favorites)
         assertEquals("value:${Keys.CONSUMPTION}", dashboard[0].id)
         assertEquals("status", dashboard[1].id)
-        assertEquals(MediaContent.ALL, dashboard.last().id)
-        assertEquals(7, dashboard.size)
+        assertEquals(MediaContent.CLUSTER, dashboard.last().id)
+        assertEquals(8, dashboard.size)
         assertEquals("—", dashboard[0].subtitle)
+    }
+
+    @Test
+    fun allTabExcludesConsumption() {
+        val entries = MediaContent.children(MediaContent.ALL, connected, favorites)
+        assertTrue(entries.none { it.id == "value:${Keys.CONSUMPTION}" })
+        assertTrue(entries.any { it.id == "value:0C" })
+    }
+
+    @Test
+    fun performanceTabIncludesLiveConsumptionFirst() {
+        val entries = MediaContent.children(MediaContent.PERFORMANCE, connected, favorites)
+        assertEquals("value:${Keys.CONSUMPTION}", entries.first().id)
+    }
+
+    @Test
+    fun clusterTabMarksSelection() {
+        val entries = MediaContent.children(MediaContent.CLUSTER, connected, favorites, clusterMetric = Keys.BOOST)
+        val none = entries.first { it.id == "cluster:" }
+        val boost = entries.first { it.id == "cluster:${Keys.BOOST}" }
+        assertEquals("Tocar para selecionar", none.subtitle)
+        assertEquals("Selecionado", boost.subtitle)
     }
 
     @Test

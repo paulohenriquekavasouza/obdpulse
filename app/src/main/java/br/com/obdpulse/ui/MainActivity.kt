@@ -11,6 +11,7 @@ import android.content.pm.PackageManager
 import android.provider.MediaStore
 import android.os.Build
 import android.os.Bundle
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.LinearLayout
@@ -25,6 +26,7 @@ import br.com.obdpulse.obd.Labels
 import br.com.obdpulse.obd.LiveValue
 import br.com.obdpulse.obd.ObdState
 import br.com.obdpulse.obd.ObdStatus
+import br.com.obdpulse.media.MediaContent
 import br.com.obdpulse.service.ObdService
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
@@ -51,6 +53,8 @@ class MainActivity : Activity() {
     private lateinit var info: TextView
     private lateinit var dtc: TextView
     private lateinit var valuesContainer: LinearLayout
+    private lateinit var clusterMetric: Spinner
+    private var clusterKeys: List<String> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,14 +67,32 @@ class MainActivity : Activity() {
         info = findViewById(R.id.info)
         dtc = findViewById(R.id.dtc)
         valuesContainer = findViewById(R.id.values)
+        clusterMetric = findViewById(R.id.cluster_metric)
         favorites = Prefs.favorites(this)
 
         connect.setOnClickListener { toggleConnection() }
         readDtc.setOnClickListener { ObdManager.requestDtcs() }
         copyDiagnostics.setOnClickListener { copyDiagnostics() }
         findViewById<Button>(R.id.refresh).setOnClickListener { loadDevices() }
+        setupClusterSpinner()
         ensurePermissions()
         handleSearch(intent)
+    }
+
+    private fun setupClusterSpinner() {
+        clusterKeys = listOf(Prefs.CLUSTER_NONE) + MediaContent.clusterOptions(favorites)
+        val labels = clusterKeys.map { if (it == Prefs.CLUSTER_NONE) getString(R.string.cluster_none) else Labels.name(it) }
+        clusterMetric.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
+        clusterMetric.setSelection(clusterKeys.indexOf(Prefs.clusterMetric(this)).coerceAtLeast(0))
+        clusterMetric.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                clusterKeys.getOrNull(position)?.let {
+                    if (it != Prefs.clusterMetric(this@MainActivity)) Prefs.saveClusterMetric(this@MainActivity, it)
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

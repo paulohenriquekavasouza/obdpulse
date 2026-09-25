@@ -1,5 +1,6 @@
 package br.com.obdpulse.media
 
+import br.com.obdpulse.Prefs.CLUSTER_NONE
 import br.com.obdpulse.obd.Format
 import br.com.obdpulse.obd.Keys
 import br.com.obdpulse.obd.Labels
@@ -18,13 +19,23 @@ object MediaContent {
     const val TURBO = "turbo"
     const val ALL = "all"
     const val DTC = "dtc"
+    const val CLUSTER = "cluster"
     const val STATUS = "status"
     const val VALUE_PREFIX = "value:"
+    const val CLUSTER_PREFIX = "cluster:"
     private const val EMPTY = "—"
 
-    val BROWSABLE_IDS = listOf(ROOT, DASHBOARD, PERFORMANCE, TURBO, ALL, DTC)
+    val BROWSABLE_IDS = listOf(ROOT, DASHBOARD, PERFORMANCE, TURBO, ALL, DTC, CLUSTER)
 
-    fun children(parentId: String, state: ObdState, favorites: List<String>): List<MediaEntry> = when (parentId) {
+    fun clusterOptions(favorites: List<String>): List<String> =
+        (favorites + listOf(Keys.CONSUMPTION, Keys.BOOST, "0D", "0C", "05", "77")).distinct()
+
+    fun children(
+        parentId: String,
+        state: ObdState,
+        favorites: List<String>,
+        clusterMetric: String = "",
+    ): List<MediaEntry> = when (parentId) {
         ROOT -> listOf(
             MediaEntry(DASHBOARD, "Painel", status(state), browsable = true),
             MediaEntry(PERFORMANCE, "Desempenho", performanceSummary(state), browsable = true),
@@ -36,20 +47,37 @@ object MediaContent {
             add(valueEntry(Keys.CONSUMPTION, state))
             add(MediaEntry(STATUS, "Status", status(state)))
             for (key in keys.drop(1)) add(valueEntry(key, state))
-            add(MediaEntry(ALL, "Todos os parâmetros", "${state.values.size} valores", browsable = true))
+            val count = state.values.count { it.key != Keys.CONSUMPTION }
+            add(MediaEntry(ALL, "Todos os parâmetros", "$count valores", browsable = true))
+            add(MediaEntry(CLUSTER, "Piscar no cluster", clusterLabel(clusterMetric), browsable = true))
         }
         PERFORMANCE -> performanceEntries(state)
         TURBO -> turboEntries(state)
-        ALL -> state.values.map { MediaEntry(VALUE_PREFIX + it.key, it.name, format(it)) }
+        ALL -> state.values.filter { it.key != Keys.CONSUMPTION }.map { MediaEntry(VALUE_PREFIX + it.key, it.name, format(it)) }
         DTC -> dtcEntries(state)
+        CLUSTER -> clusterEntries(favorites, clusterMetric)
         else -> emptyList()
     }
+
+    private fun clusterEntries(favorites: List<String>, clusterMetric: String): List<MediaEntry> = buildList {
+        add(MediaEntry(CLUSTER_PREFIX + CLUSTER_NONE, "Nenhuma", selectionHint(clusterMetric.isBlank())))
+        for (key in clusterOptions(favorites)) {
+            add(MediaEntry(CLUSTER_PREFIX + key, Labels.name(key), selectionHint(clusterMetric == key)))
+        }
+    }
+
+    private fun clusterLabel(clusterMetric: String): String =
+        if (clusterMetric.isBlank()) "Nenhuma (só 0–100)" else Labels.name(clusterMetric)
+
+    private fun selectionHint(selected: Boolean): String =
+        if (selected) "Selecionado" else "Tocar para selecionar"
 
     private fun performanceEntries(state: ObdState): List<MediaEntry> {
         val trip = state.trip
         return listOf(
-            MediaEntry("perf:0100best", "0–100 km/h (melhor)", seconds(trip.bestZeroTo100Ms)),
+            valueEntry(Keys.CONSUMPTION, state),
             MediaEntry("perf:0100last", "0–100 km/h (última)", seconds(trip.lastZeroTo100Ms)),
+            MediaEntry("perf:0100best", "0–100 km/h (melhor)", seconds(trip.bestZeroTo100Ms)),
             MediaEntry("perf:vmax", "Velocidade máxima", number(trip.maxSpeed, 0, "km/h")),
             MediaEntry("perf:rpmmax", "Rotação máxima", number(trip.maxRpm, 0, "rpm")),
             MediaEntry("perf:boostmax", "Turbo máximo", number(trip.maxBoost, 2, "bar")),

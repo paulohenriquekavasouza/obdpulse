@@ -16,6 +16,7 @@ class TripTracker {
     private var launchTimeMs: Long? = null
     private var best: Long? = null
     private var last: Long? = null
+    private var lastSub10: Long? = null
 
     fun onSample(nowMs: Long, values: Map<String, LiveValue>): TripStats {
         val boost = values[Keys.BOOST]?.value
@@ -50,6 +51,7 @@ class TripTracker {
         avgKmPerLiter = if (sumRate > 0.0) sumSpeed / sumRate else null,
         bestZeroTo100Ms = best,
         lastZeroTo100Ms = last,
+        lastSub10Ms = lastSub10,
     )
 
     private fun updateLaunch(nowMs: Long, speed: Double) {
@@ -74,6 +76,7 @@ class TripTracker {
             if (elapsed in 1_000..60_000) {
                 last = elapsed
                 best = best?.let { minOf(it, elapsed) } ?: elapsed
+                if (elapsed < 10_000) lastSub10 = elapsed
             }
             launchTimeMs = null
         }

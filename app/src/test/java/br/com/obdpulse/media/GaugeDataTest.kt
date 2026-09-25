@@ -16,39 +16,38 @@ class GaugeDataTest {
     private val connected = ObdState(
         status = ObdStatus.CONNECTED,
         values = listOf(
-            LiveValue(Keys.BOOST, "Turbo", 0.85, "0,85", "bar", 0),
             LiveValue(Keys.CONSUMPTION, "km/L", 12.3, "12,3", "km/L", 0),
             LiveValue("0C", "Rotação", 1726.0, "1726", "rpm", 10),
             LiveValue("0D", "Velocidade", 60.0, "60", "km/h", 20),
             LiveValue("05", "Motor", 92.0, "92", "°C", 30),
         ),
-        trip = TripStats(maxBoost = 1.32),
+        trip = TripStats(lastSub10Ms = 8730),
     )
 
     @Test
-    fun extractsGaugeValuesFromState() {
+    fun extractsSpeedAndGridValues() {
         val data = GaugeData.from(connected)
         assertTrue(data.connected)
-        assertEquals(0.85, data.boost!!, 0.0001)
-        assertEquals("0,85", data.boostText)
-        assertEquals(1.32, data.boostMax!!, 0.0001)
+        assertEquals(60.0, data.speed!!, 0.0001)
+        assertEquals("60", data.speedText)
         assertEquals("12,3", data.kmpl)
         assertEquals("1726 rpm", data.rpm)
-        assertEquals("60 km/h", data.speed)
         assertEquals("92 °C", data.coolant)
+        assertEquals("8,7 s", data.lastZeroTo100)
     }
 
     @Test
-    fun disconnectedShowsDashesAndNoBoost() {
+    fun disconnectedShowsDashesAndNoSpeed() {
         val data = GaugeData.from(ObdState())
         assertFalse(data.connected)
-        assertNull(data.boost)
-        assertEquals(GaugeData.EMPTY, data.boostText)
+        assertNull(data.speed)
+        assertEquals(GaugeData.EMPTY, data.speedText)
         assertEquals(GaugeData.EMPTY, data.kmpl)
+        assertEquals(GaugeData.EMPTY, data.lastZeroTo100)
     }
 
     @Test
-    fun signatureChangesWithValuesButNotElse() {
+    fun signatureChangesWithValuesButNotWithUnrelatedState() {
         val base = GaugeData.from(connected).signature()
         val sameValues = GaugeData.from(connected.copy(dtcReadCount = 5)).signature()
         val changed = GaugeData.from(

@@ -42,6 +42,19 @@ class TripTrackerTest {
 
         assertEquals(7475L, stats.bestZeroTo100Ms)
         assertEquals(7475L, stats.lastZeroTo100Ms)
+        assertEquals(7475L, stats.lastSub10Ms)
+    }
+
+    @Test
+    fun runsOfTenSecondsOrMoreDoNotCountAsSub10() {
+        val tracker = TripTracker()
+        tracker.onSample(0, sample("0D" to 0.0))
+        tracker.onSample(1000, sample("0D" to 0.0))
+        tracker.onSample(1001, sample("0D" to 10.0))
+        tracker.onSample(12999, sample("0D" to 90.0))
+        val stats = tracker.onSample(13000, sample("0D" to 100.0))
+        assertEquals(12000L, stats.lastZeroTo100Ms)
+        assertNull(stats.lastSub10Ms)
     }
 
     @Test
