@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OBD Pulse</string>
+
+    <string name="connect">Conectar</string>
+    <string name="disconnect">Desconectar</string>
+    <string name="read_dtc">Ler falhas</string>
+    <string name="refresh">Atualizar</string>
+    <string name="none">nenhuma</string>
+    <string name="favorites_hint">Toque em um item para mostrá-lo (★) ou ocultá-lo no Android Auto.</string>
+
+    <string name="status_disconnected">Desconectado</string>
+    <string name="status_connecting">Conectando ao leitor…</string>
+    <string name="status_initializing">Comunicando com o veículo…</string>
+    <string name="status_connected">Conectado</string>
+    <string name="status_error">Erro: %1$s</string>
+
+    <string name="permission_needed">Conceda a permissão de dispositivos próximos (Bluetooth) para listar o leitor.</string>
+    <string name="bluetooth_missing">Este aparelho não tem Bluetooth.</string>
+    <string name="bluetooth_off">Ative o Bluetooth e toque em Atualizar.</string>
+    <string name="no_paired">Nenhum dispositivo pareado. Pareie o ELM327 nas configurações de Bluetooth (PIN 1234 ou 0000).</string>
+    <string name="select_device">Selecione o leitor OBD</string>
+
+    <string name="info_adapter">Leitor: %1$s</string>
+    <string name="info_protocol">Protocolo: %1$s</string>
+    <string name="info_vin">Chassi (VIN): %1$s</string>
+    <string name="info_ecu">Central %1$s: %2$s · %3$d parâmetros</string>
+    <string name="info_mil_on">Luz de falha (MIL): acesa · %1$d código(s)</string>
+    <string name="info_mil_off">Luz de falha (MIL): apagada · %1$d código(s)</string>
+
+    <string name="dtc_reading">Lendo códigos de falha…</string>
+    <string name="dtc_stored">Armazenadas</string>
+    <string name="dtc_pending">Pendentes</string>
+    <string name="dtc_permanent">Permanentes</string>
+
+    <string name="notification_channel">Conexão OBD</string>
+    <string name="notification_connecting">Conectando ao leitor…</string>
+    <string name="notification_initializing">Comunicando com o veículo…</string>
+    <string name="notification_connected">Lendo dados do veículo</string>
+    <string name="notification_connected_mil">Lendo dados · luz de falha acesa</string>
+
+    <string name="car_status">Status</string>
+    <string name="car_dtc">Falhas</string>
+    <string name="car_disconnected">Desconectado · toque para conectar</string>
+    <string name="car_connecting">Conectando ao leitor…</string>
+    <string name="car_initializing">Comunicando com o veículo…</string>
+    <string name="car_connected">Conectado · toque para desconectar</string>
+    <string name="car_error">%1$s · toque para tentar novamente</string>
+    <string name="car_mil">Luz de falha acesa (%1$d)</string>
+    <string name="car_select_device">Escolha o leitor no app do celular primeiro</string>
+
+    <string name="dtc_title">Códigos de falha</string>
+    <string name="dtc_not_connected">Conecte ao veículo para ler as falhas</string>
+    <string name="dtc_none">Nenhuma falha registrada</string>
+    <string name="dtc_row">%1$s · central %2$s</string>
+    <string name="dtc_stored_one">Armazenada</string>
+    <string name="dtc_pending_one">Pendente</string>
+    <string name="dtc_permanent_one">Permanente</string>
+</resources>
