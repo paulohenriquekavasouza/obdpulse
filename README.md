@@ -95,6 +95,8 @@ No carro:
 
 Limitações: a interface é de player (sem áudio), e o Android Auto trata o OBD Pulse como a fonte de mídia atual enquanto ele está aberto. Dependendo da versão do Android Auto, isso pode interferir no app de música.
 
+Sobre o pop-up "tocando agora" no cluster: o painel do carro mostra um aviso sempre que o título dos metadados de mídia muda. Nesta branch, os metadados ficam fixos ("OBD Pulse" e o status da conexão) e só mudam ao conectar ou desconectar, então o pop-up deixa de aparecer a cada leitura. Em troca, a linha "tocando agora" não mostra mais os valores ao vivo nem o valor em destaque ao tocar num item; os valores ao vivo continuam nas abas Painel e Todos, que atualizam sem gerar o pop-up. Não há como manter os valores ao vivo no "tocando agora" sem reativar o pop-up, porque ele é uma reação do próprio cluster à troca de metadados.
+
 ### Interface de painel (Google Play)
 
 O Android Auto só lista apps feitos com a Car App Library quando eles são instalados por uma fonte confiável do Google Play. A opção "Fontes desconhecidas" **não vale** para esse tipo de app. Se o app for instalado pelo Google Play, as duas interfaces aparecem no carro.

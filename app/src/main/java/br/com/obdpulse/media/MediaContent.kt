@@ -44,6 +44,9 @@ object MediaContent {
         return NowPlaying(title, subtitle.ifEmpty { status(state) }, "${status(state)} · ${dtcSummary(state)}")
     }
 
+    fun stableNowPlaying(state: ObdState): NowPlaying =
+        NowPlaying("OBD Pulse", status(state), dtcSummary(state))
+
     fun match(query: String?, keys: List<String>): String? {
         val wanted = normalize(query ?: return null)
         if (wanted.isBlank()) return null

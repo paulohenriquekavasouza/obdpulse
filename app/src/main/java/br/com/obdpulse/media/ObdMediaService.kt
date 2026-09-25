@@ -16,9 +16,7 @@ import androidx.core.graphics.createBitmap
 import br.com.obdpulse.ObdManager
 import br.com.obdpulse.Prefs
 import br.com.obdpulse.R
-import br.com.obdpulse.obd.Keys
 import br.com.obdpulse.obd.ObdState
-import br.com.obdpulse.obd.Pids
 import br.com.obdpulse.obd.ObdStatus
 import br.com.obdpulse.service.ObdService
 import br.com.obdpulse.ui.MainActivity
@@ -32,13 +30,13 @@ class ObdMediaService : MediaBrowserService() {
     private val scope = MainScope()
     private lateinit var session: MediaSession
     private var art: Bitmap? = null
-    private var focus: String? = null
     private var lastRender = 0L
     private var lastChildren = 0L
     private var renderPending = false
     private var lastStatus: ObdStatus? = null
     private var lastDtcReads = -1
     private var lastDtcLoading = false
+    private var lastMetaSignature: String? = null
 
     internal var lastPlaybackState: PlaybackState? = null
         private set
@@ -98,21 +96,14 @@ class ObdMediaService : MediaBrowserService() {
             when {
                 mediaId == MediaContent.STATUS ->
                     if (ObdManager.state.value.isActive) ObdManager.disconnect() else connect()
-                mediaId.startsWith(MediaContent.VALUE_PREFIX) -> {
-                    focus = mediaId.removePrefix(MediaContent.VALUE_PREFIX)
+                mediaId.startsWith(MediaContent.VALUE_PREFIX) ->
                     if (!ObdManager.state.value.isActive) connect()
-                    render(ObdManager.state.value)
-                }
                 mediaId.startsWith(MediaContent.DTC) -> ObdManager.requestDtcs()
             }
         }
 
         override fun onPlayFromSearch(query: String?, extras: Bundle?) {
-            val keys = (ObdManager.state.value.values.map { it.key } + Prefs.favorites(this@ObdMediaService) +
-                listOf(Keys.BOOST, Keys.CONSUMPTION) + Pids.all.map { it.key }).distinct()
-            MediaContent.match(query, keys)?.let { focus = it }
             if (!ObdManager.state.value.isActive) connect()
-            render(ObdManager.state.value)
         }
     }
 
@@ -144,20 +135,24 @@ class ObdMediaService : MediaBrowserService() {
 
     private fun render(state: ObdState) {
         lastRender = SystemClock.elapsedRealtime()
-        val nowPlaying = MediaContent.nowPlaying(state, Prefs.favorites(this), focus)
-        val metadata =
-            MediaMetadata.Builder()
-                .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, MediaContent.STATUS)
-                .putString(MediaMetadata.METADATA_KEY_TITLE, nowPlaying.title)
-                .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, nowPlaying.title)
-                .putString(MediaMetadata.METADATA_KEY_ARTIST, nowPlaying.subtitle)
-                .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, nowPlaying.subtitle)
-                .putString(MediaMetadata.METADATA_KEY_ALBUM, nowPlaying.album)
-                .putString(MediaMetadata.METADATA_KEY_DISPLAY_DESCRIPTION, nowPlaying.album)
-                .apply { art?.let { putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, it) } }
-                .build()
-        lastMetadata = metadata
-        session.setMetadata(metadata)
+        val nowPlaying = MediaContent.stableNowPlaying(state)
+        val signature = "${nowPlaying.title}|${nowPlaying.subtitle}|${nowPlaying.album}"
+        if (signature != lastMetaSignature) {
+            lastMetaSignature = signature
+            val metadata =
+                MediaMetadata.Builder()
+                    .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, MediaContent.STATUS)
+                    .putString(MediaMetadata.METADATA_KEY_TITLE, nowPlaying.title)
+                    .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, nowPlaying.title)
+                    .putString(MediaMetadata.METADATA_KEY_ARTIST, nowPlaying.subtitle)
+                    .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, nowPlaying.subtitle)
+                    .putString(MediaMetadata.METADATA_KEY_ALBUM, nowPlaying.album)
+                    .putString(MediaMetadata.METADATA_KEY_DISPLAY_DESCRIPTION, nowPlaying.album)
+                    .apply { art?.let { putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, it) } }
+                    .build()
+            lastMetadata = metadata
+            session.setMetadata(metadata)
+        }
         publish(playbackState(state))
 
         val dtcChanged = state.dtcReadCount != lastDtcReads || state.dtcLoading != lastDtcLoading

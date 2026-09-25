@@ -55,6 +55,13 @@ class MediaContentTest {
     }
 
     @Test
+    fun stableNowPlayingHasNoLiveValues() {
+        val nowPlaying = MediaContent.stableNowPlaying(connected)
+        assertEquals("OBD Pulse", nowPlaying.title)
+        assertEquals("Conectado", nowPlaying.subtitle)
+    }
+
+    @Test
     fun nowPlayingWhileDisconnectedExplainsHowToConnect() {
         val nowPlaying = MediaContent.nowPlaying(ObdState(), favorites, focus = null)
         assertEquals("OBD Pulse", nowPlaying.title)
