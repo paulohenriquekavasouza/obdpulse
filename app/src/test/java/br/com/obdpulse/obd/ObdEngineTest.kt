@@ -84,7 +84,8 @@ class ObdEngineTest {
         assertEquals("0,85", values.getValue(Keys.BOOST).text)
         assertEquals("25", values.getValue("46").text)
         assertEquals("12,4", values.getValue(Keys.BATTERY).text)
-        assertEquals(Keys.BOOST, state.values.first().key)
+        assertEquals(Keys.CONSUMPTION, state.values.first().key)
+        assertEquals(Keys.BOOST, state.values[1].key)
         assertEquals(false, state.milOn)
         assertEquals(0, state.dtcCount)
 
@@ -94,17 +95,16 @@ class ObdEngineTest {
     }
 
     @Test
-    fun computesKilometersPerLiterRightAfterFuelRate() = runBlocking {
+    fun kilometersPerLiterIsComputedAndShownFirst() = runBlocking {
         val engine = engineFor(FakeCar())
         withTimeout(10_000) { engine.initialize() }
         val state = poll(engine, Keys.CONSUMPTION)
 
-        val keys = state.values.map { it.key }
         val values = state.values.associateBy { it.key }
         assertEquals("6,0", values.getValue("5E").text)
         assertEquals("10,0", values.getValue(Keys.CONSUMPTION).text)
         assertEquals("km/L", values.getValue(Keys.CONSUMPTION).unit)
-        assertEquals(keys.indexOf("5E") + 1, keys.indexOf(Keys.CONSUMPTION))
+        assertEquals(Keys.CONSUMPTION, state.values.first().key)
     }
 
     @Test

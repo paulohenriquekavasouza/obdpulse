@@ -1,5 +1,6 @@
 package br.com.obdpulse.media
 
+import br.com.obdpulse.obd.Keys
 import br.com.obdpulse.obd.Labels
 import br.com.obdpulse.obd.LiveValue
 import br.com.obdpulse.obd.ObdState
@@ -25,10 +26,10 @@ object MediaContent {
             MediaEntry(DTC, "Falhas", dtcSummary(state), browsable = true),
         )
         DASHBOARD -> buildList {
+            val keys = (listOf(Keys.CONSUMPTION) + visibleFavorites(state, favorites)).distinct()
+            add(valueEntry(Keys.CONSUMPTION, state))
             add(MediaEntry(STATUS, "Status", status(state)))
-            for (key in visibleFavorites(state, favorites)) {
-                add(MediaEntry(VALUE_PREFIX + key, Labels.name(key), format(state.values.firstOrNull { it.key == key })))
-            }
+            for (key in keys.drop(1)) add(valueEntry(key, state))
         }
         ALL -> state.values.map { MediaEntry(VALUE_PREFIX + it.key, it.name, format(it)) }
         DTC -> dtcEntries(state)
@@ -98,6 +99,9 @@ object MediaContent {
             report.permanent.map { MediaEntry("$DTC:${it.code}", it.code, "Permanente · central ${it.ecu}") }
         return entries.ifEmpty { listOf(MediaEntry("$DTC:none", "Nenhuma falha registrada", null)) }
     }
+
+    private fun valueEntry(key: String, state: ObdState): MediaEntry =
+        MediaEntry(VALUE_PREFIX + key, Labels.name(key), format(state.values.firstOrNull { it.key == key }))
 
     private fun format(value: LiveValue?): String =
         value?.let { "${it.text} ${it.unit}".trim() } ?: EMPTY

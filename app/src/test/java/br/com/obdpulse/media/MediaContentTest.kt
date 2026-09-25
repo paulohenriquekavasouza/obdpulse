@@ -32,18 +32,24 @@ class MediaContentTest {
     }
 
     @Test
-    fun dashboardShowsStatusAndAvailableFavorites() {
+    fun dashboardPutsConsumptionFirstThenStatusAndFavorites() {
         val dashboard = MediaContent.children(MediaContent.DASHBOARD, connected, favorites)
-        assertEquals(listOf("status", "value:BOOST", "value:0C", "value:0D"), dashboard.map { it.id })
-        assertEquals("0,85 bar", dashboard[1].subtitle)
+        assertEquals(
+            listOf("value:${Keys.CONSUMPTION}", "status", "value:BOOST", "value:0C", "value:0D"),
+            dashboard.map { it.id },
+        )
+        assertEquals("Consumo em km/L", dashboard[0].title)
+        assertEquals("0,85 bar", dashboard[2].subtitle)
         assertTrue(dashboard.none { it.browsable })
     }
 
     @Test
     fun dashboardKeepsAllFavoritesWhileDisconnected() {
         val dashboard = MediaContent.children(MediaContent.DASHBOARD, ObdState(), favorites)
-        assertEquals(5, dashboard.size)
-        assertEquals("—", dashboard[3].subtitle)
+        assertEquals("value:${Keys.CONSUMPTION}", dashboard[0].id)
+        assertEquals("status", dashboard[1].id)
+        assertEquals(6, dashboard.size)
+        assertEquals("—", dashboard[0].subtitle)
     }
 
     @Test
