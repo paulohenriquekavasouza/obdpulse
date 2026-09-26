@@ -30,6 +30,10 @@ class GaugeRenderer {
         textAlign = Paint.Align.CENTER
         typeface = Typeface.DEFAULT_BOLD
     }
+    private val vignette = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val edge = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+    }
 
     fun render(data: GaugeData): Bitmap {
         val bitmap = createBitmap(SIZE, SIZE)
@@ -38,7 +42,27 @@ class GaugeRenderer {
 
         drawArc(canvas, data)
         drawGrid(canvas, data)
+        drawSpeedAlert(canvas, data)
         return bitmap
+    }
+
+    private fun drawSpeedAlert(canvas: Canvas, data: GaugeData) {
+        val speed = data.speed ?: return
+        if (speed <= ALERT_FROM) return
+        val intensity = ((speed - ALERT_FROM) / (ALERT_TO - ALERT_FROM)).toFloat().coerceIn(0.2f, 1f)
+        val alpha = (intensity * 255f).toInt().coerceIn(0, 255)
+        vignette.shader = android.graphics.RadialGradient(
+            CX, CX, SIZE * 0.72f,
+            intArrayOf(0, 0, (alpha shl 24) or (RED and 0x00FFFFFF)),
+            floatArrayOf(0f, 0.62f, 1f),
+            Shader.TileMode.CLAMP,
+        )
+        canvas.drawRect(0f, 0f, SIZE.toFloat(), SIZE.toFloat(), vignette)
+
+        edge.color = (alpha shl 24) or (RED and 0x00FFFFFF)
+        edge.strokeWidth = 8f + intensity * 22f
+        val inset = edge.strokeWidth / 2f
+        canvas.drawRect(inset, inset, SIZE - inset, SIZE - inset, edge)
     }
 
     private fun drawArc(canvas: Canvas, data: GaugeData) {
@@ -65,8 +89,8 @@ class GaugeRenderer {
 
     private fun drawGrid(canvas: Canvas, data: GaugeData) {
         cell(canvas, LEFT, ROW1, "km/L", data.kmpl, hero = true)
-        cell(canvas, RIGHT, ROW1, "MOTOR", data.coolant)
-        cell(canvas, LEFT, ROW2, "ROTAÇÃO", data.rpm)
+        cell(canvas, RIGHT, ROW1, data.cellALabel, data.cellAValue)
+        cell(canvas, LEFT, ROW2, data.cellBLabel, data.cellBValue)
         cell(canvas, RIGHT, ROW2, "ÚLT. 0–100", data.lastZeroTo100)
     }
 
@@ -97,6 +121,8 @@ class GaugeRenderer {
         const val RIGHT = 356f
         const val ROW1 = 336f
         const val ROW2 = 428f
+        const val ALERT_FROM = 80.0
+        const val ALERT_TO = 120.0
 
         const val BG_TOP = 0xFF1B2330.toInt()
         const val BG_BOTTOM = 0xFF08090C.toInt()

@@ -69,6 +69,43 @@
         android:layout_height="wrap_content"
         android:text="@string/copy_diagnostics" />
 
+    <CheckBox
+        android:id="@+id/auto_connect"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/auto_connect" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/open_records"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/open_records" />
+
+        <Button
+            android:id="@+id/open_trip"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/open_trip" />
+
+        <Button
+            android:id="@+id/open_graph"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/open_graph" />
+    </LinearLayout>
+
     <TextView
         android:id="@+id/info"
         android:layout_width="match_parent"

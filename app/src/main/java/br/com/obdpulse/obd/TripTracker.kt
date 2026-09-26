@@ -10,6 +10,10 @@ class TripTracker {
 
     private var sumSpeed = 0.0
     private var sumRate = 0.0
+    private var distanceKm = 0.0
+    private var fuelUsedL = 0.0
+    private var hardAccels = 0
+    private var lastIntegrateMs: Long? = null
 
     private var prevSpeed: Double? = null
     private var prevTimeMs = 0L
@@ -37,6 +41,14 @@ class TripTracker {
             sumRate += rate
         }
 
+        val previousMs = lastIntegrateMs
+        lastIntegrateMs = nowMs
+        if (previousMs != null) {
+            val dtHours = ((nowMs - previousMs).coerceIn(0, MAX_DT_MS)) / 3_600_000.0
+            if (speed != null) distanceKm += speed * dtHours
+            if (rate != null) fuelUsedL += rate * dtHours
+        }
+
         if (speed != null) updateLaunch(nowMs, speed)
 
         return stats()
@@ -52,6 +64,9 @@ class TripTracker {
         bestZeroTo100Ms = best,
         lastZeroTo100Ms = last,
         lastSub10Ms = lastSub10,
+        distanceKm = distanceKm,
+        fuelUsedL = fuelUsedL,
+        hardAccels = hardAccels,
     )
 
     private fun updateLaunch(nowMs: Long, speed: Double) {
@@ -59,6 +74,11 @@ class TripTracker {
         val prevTime = prevTimeMs
         prevSpeed = speed
         prevTimeMs = nowMs
+
+        if (prev != null && nowMs > prevTime) {
+            val accel = (speed - prev) / ((nowMs - prevTime) / 1000.0)
+            if (accel >= HARD_ACCEL) hardAccels++
+        }
 
         if (speed <= STANDSTILL) {
             launchTimeMs = null
@@ -97,5 +117,7 @@ class TripTracker {
     private companion object {
         const val STANDSTILL = 1.0
         const val TARGET = 100.0
+        const val MAX_DT_MS = 3_000L
+        const val HARD_ACCEL = 9.0
     }
 }

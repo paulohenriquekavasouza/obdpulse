@@ -89,7 +89,14 @@ object ObdManager {
                 val current = ObdEngine(elm)
                 session = current
                 engine = current
-                launch { current.state.collect { if (isActive) _state.value = it } }
+                launch {
+                    current.state.collect {
+                        if (isActive) {
+                            _state.value = it
+                            Prefs.updateRecords(context, it.trip)
+                        }
+                    }
+                }
                 try {
                     current.initialize(Prefs.protocol(context))
                     current.state.value.protocolNumber?.let { Prefs.saveProtocol(context, it) }

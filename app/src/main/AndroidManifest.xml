@@ -47,6 +47,21 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.RecordsActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.MainActivity" />
+
+        <activity
+            android:name=".ui.TripActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.MainActivity" />
+
+        <activity
+            android:name=".ui.GraphActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.MainActivity" />
+
         <service
             android:name=".service.ObdService"
             android:exported="false"

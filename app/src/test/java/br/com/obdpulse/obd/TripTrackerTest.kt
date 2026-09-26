@@ -76,6 +76,32 @@ class TripTrackerTest {
         assertNull(stats.bestZeroTo100Ms)
     }
 
+    @Test
+    fun integratesDistanceAndFuelOverTime() {
+        val tracker = TripTracker()
+        tracker.onSample(0, sample("0D" to 90.0, "5E" to 18.0))
+        val stats = tracker.onSample(2000, sample("0D" to 90.0, "5E" to 18.0))
+        assertEquals(90.0 * 2000.0 / 3_600_000.0, stats.distanceKm, 1e-6)
+        assertEquals(18.0 * 2000.0 / 3_600_000.0, stats.fuelUsedL, 1e-6)
+    }
+
+    @Test
+    fun capsLongGapsWhenIntegrating() {
+        val tracker = TripTracker()
+        tracker.onSample(0, sample("0D" to 3600.0))
+        val stats = tracker.onSample(10_000, sample("0D" to 3600.0))
+        assertEquals(3.0, stats.distanceKm, 0.0001)
+    }
+
+    @Test
+    fun countsHardAccelerations() {
+        val tracker = TripTracker()
+        tracker.onSample(0, sample("0D" to 0.0))
+        tracker.onSample(1000, sample("0D" to 40.0))
+        val stats = tracker.onSample(2000, sample("0D" to 45.0))
+        assertEquals(1, stats.hardAccels)
+    }
+
     private fun run(tracker: TripTracker, from: Long, launchAt: Long, reach: Long) {
         tracker.onSample(from, sample("0D" to 0.0))
         tracker.onSample(launchAt, sample("0D" to 0.0))

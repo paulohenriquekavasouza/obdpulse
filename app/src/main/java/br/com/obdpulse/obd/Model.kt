@@ -39,6 +39,9 @@ data class TripStats(
     val bestZeroTo100Ms: Long? = null,
     val lastZeroTo100Ms: Long? = null,
     val lastSub10Ms: Long? = null,
+    val distanceKm: Double = 0.0,
+    val fuelUsedL: Double = 0.0,
+    val hardAccels: Int = 0,
 )
 
 data class ObdState(

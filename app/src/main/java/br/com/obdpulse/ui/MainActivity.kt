@@ -14,6 +14,7 @@ import android.os.Bundle
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
@@ -93,6 +94,15 @@ class MainActivity : Activity() {
         readDtc.setOnClickListener { ObdManager.requestDtcs() }
         copyDiagnostics.setOnClickListener { copyDiagnostics() }
         findViewById<Button>(R.id.refresh).setOnClickListener { loadDevices() }
+        val autoConnect = findViewById<CheckBox>(R.id.auto_connect)
+        autoConnect.isChecked = Prefs.autoConnect(this)
+        autoConnect.setOnCheckedChangeListener { _, checked ->
+            Prefs.setAutoConnect(this, checked)
+            if (checked) maybeAutoConnect()
+        }
+        findViewById<Button>(R.id.open_records).setOnClickListener { startActivity(Intent(this, RecordsActivity::class.java)) }
+        findViewById<Button>(R.id.open_trip).setOnClickListener { startActivity(Intent(this, TripActivity::class.java)) }
+        findViewById<Button>(R.id.open_graph).setOnClickListener { startActivity(Intent(this, GraphActivity::class.java)) }
         setupClusterSpinner()
         ensurePermissions()
         handleSearch(intent)
@@ -196,6 +206,15 @@ class MainActivity : Activity() {
         val saved = pairedDevices.indexOfFirst { it.address == Prefs.address(this) }
         if (saved >= 0) devices.setSelection(saved)
         if (pairedDevices.isEmpty()) status.setText(R.string.no_paired)
+        maybeAutoConnect()
+    }
+
+    private fun maybeAutoConnect() {
+        if (!Prefs.autoConnect(this)) return
+        if (ObdManager.state.value.isActive) return
+        val address = Prefs.address(this) ?: return
+        if (pairedDevices.none { it.address == address }) return
+        ObdService.start(this, address)
     }
 
     private fun toggleConnection() {

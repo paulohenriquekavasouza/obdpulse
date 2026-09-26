@@ -83,6 +83,7 @@ class ObdMediaService : MediaBrowserService() {
 
     override fun onGetRoot(clientPackageName: String, clientUid: Int, rootHints: Bundle?): BrowserRoot? {
         if (rootHints?.getBoolean(BrowserRoot.EXTRA_RECENT) == true) return null
+        maybeAutoConnect()
         val extras = Bundle().apply {
             putBoolean(CONTENT_STYLE_SUPPORTED, true)
             putInt(CONTENT_STYLE_BROWSABLE_HINT, CONTENT_STYLE_LIST)
@@ -130,6 +131,13 @@ class ObdMediaService : MediaBrowserService() {
         }
     }
 
+    private fun maybeAutoConnect() {
+        if (!Prefs.autoConnect(this)) return
+        if (ObdManager.state.value.isActive) return
+        val address = Prefs.address(this) ?: return
+        ObdService.start(this, address)
+    }
+
     private fun connect() {
         val address = Prefs.address(this)
         if (address == null) {
@@ -158,7 +166,8 @@ class ObdMediaService : MediaBrowserService() {
 
     private fun render(state: ObdState) {
         lastRender = SystemClock.elapsedRealtime()
-        val data = GaugeData.from(state)
+        val tick = (lastRender / ROTATE_MS).toInt()
+        val data = GaugeData.from(state, tick)
         val title = clusterTitle(state)
         val signature = "$title|${data.signature()}"
         if (signature != lastMetaSignature) {
@@ -169,8 +178,8 @@ class ObdMediaService : MediaBrowserService() {
                     .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, MediaContent.STATUS)
                     .putString(MediaMetadata.METADATA_KEY_TITLE, title)
                     .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, title)
-                    .putString(MediaMetadata.METADATA_KEY_ARTIST, data.status)
-                    .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, data.status)
+                    .putString(MediaMetadata.METADATA_KEY_ARTIST, data.subtitle)
+                    .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, data.subtitle)
                     .putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, art)
                     .putBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON, art)
                     .build()
@@ -262,6 +271,7 @@ class ObdMediaService : MediaBrowserService() {
         const val RENDER_INTERVAL = 200L
         const val CHILDREN_INTERVAL = 1_000L
         const val FLASH_MS = 6_000L
+        const val ROTATE_MS = 3_000L
         const val CONTENT_STYLE_SUPPORTED = "android.media.browse.CONTENT_STYLE_SUPPORTED"
         const val CONTENT_STYLE_BROWSABLE_HINT = "android.media.browse.CONTENT_STYLE_BROWSABLE_HINT"
         const val CONTENT_STYLE_PLAYABLE_HINT = "android.media.browse.CONTENT_STYLE_PLAYABLE_HINT"

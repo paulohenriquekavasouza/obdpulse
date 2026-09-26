@@ -80,4 +80,35 @@
     <string name="dtc_stored_one">Armazenada</string>
     <string name="dtc_pending_one">Pendente</string>
     <string name="dtc_permanent_one">Permanente</string>
+
+    <string name="auto_connect">Conectar automaticamente</string>
+    <string name="open_records">Recordes</string>
+    <string name="open_trip">Computador de bordo</string>
+    <string name="open_graph">Gráfico ao vivo</string>
+
+    <string name="records_title">Recordes</string>
+    <string name="records_session">Sessão atual</string>
+    <string name="records_alltime">Histórico</string>
+    <string name="records_reset">Zerar histórico</string>
+    <string name="records_reset_done">Histórico zerado</string>
+    <string name="rec_0100">Melhor 0–100</string>
+    <string name="rec_vmax">Velocidade máxima</string>
+    <string name="rec_rpm">Rotação máxima</string>
+    <string name="rec_boost">Turbo máximo</string>
+
+    <string name="trip_title">Computador de bordo</string>
+    <string name="trip_distance">Distância</string>
+    <string name="trip_fuel_used">Combustível usado</string>
+    <string name="trip_cost">Custo estimado</string>
+    <string name="trip_avg">Consumo médio</string>
+    <string name="trip_range">Autonomia estimada</string>
+    <string name="trip_eco">Nota de condução</string>
+    <string name="trip_fuel_price">Preço do combustível (R$/L)</string>
+    <string name="trip_tank">Tanque (L)</string>
+    <string name="trip_save">Salvar</string>
+    <string name="trip_saved">Configurações salvas</string>
+
+    <string name="graph_title">Gráfico ao vivo</string>
+    <string name="graph_pick">Parâmetro:</string>
+    <string name="graph_waiting">Conecte ao veículo para ver o gráfico</string>
 </resources>

@@ -25,25 +25,45 @@ class GaugeDataTest {
     )
 
     @Test
-    fun extractsSpeedAndGridValues() {
+    fun extractsSpeedAndHeroValues() {
         val data = GaugeData.from(connected)
         assertTrue(data.connected)
         assertEquals(60.0, data.speed!!, 0.0001)
         assertEquals("60", data.speedText)
         assertEquals("12,3", data.kmpl)
-        assertEquals("1726 rpm", data.rpm)
-        assertEquals("92 °C", data.coolant)
         assertEquals("8,7 s", data.lastZeroTo100)
     }
 
     @Test
-    fun disconnectedShowsDashesAndNoSpeed() {
+    fun rotatesCellsThroughAvailableMetrics() {
+        val many = connected.copy(
+            values = connected.values + listOf(
+                LiveValue("77", "Intercooler", 40.0, "40", "°C", 40),
+                LiveValue("0F", "Admissão", 35.0, "35", "°C", 50),
+            ),
+        )
+        val labels = (0..5).map { tick ->
+            val d = GaugeData.from(many, tick)
+            d.cellALabel to d.cellBLabel
+        }.toSet()
+        assertTrue(labels.size > 1)
+    }
+
+    @Test
+    fun rotatesSubtitleWhenConnected() {
+        val subs = (0..2).map { GaugeData.from(connected, it).subtitle }.toSet()
+        assertEquals(3, subs.size)
+    }
+
+    @Test
+    fun disconnectedShowsDashesAndStatusSubtitle() {
         val data = GaugeData.from(ObdState())
         assertFalse(data.connected)
         assertNull(data.speed)
         assertEquals(GaugeData.EMPTY, data.speedText)
         assertEquals(GaugeData.EMPTY, data.kmpl)
         assertEquals(GaugeData.EMPTY, data.lastZeroTo100)
+        assertEquals(data.status, data.subtitle)
     }
 
     @Test

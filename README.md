@@ -68,6 +68,13 @@ Versões: AGP 8.13.2, Kotlin 2.2.21, Car App Library 1.7.0, Gradle 8.14.5, compi
 3. Abra o **OBD Pulse**, conceda as permissões, escolha o leitor e toque em **Conectar**.
 4. Toque nos parâmetros para marcar com ★ os que devem aparecer no Android Auto.
 
+Com **Conectar automaticamente** marcado (padrão), o app conecta sozinho ao leitor salvo ao abrir a tela do celular ou ao entrar no Android Auto, sem precisar tocar em Conectar/Play.
+
+Três telas adicionais no celular:
+- **Recordes:** melhores marcas da sessão atual e do histórico (melhor 0–100, velocidade, rotação e turbo máximos), com botão para zerar o histórico.
+- **Computador de bordo:** distância, combustível usado, custo estimado (pelo preço do litro), consumo médio, autonomia estimada (pelo nível do tanque) e nota de condução. O preço do combustível e o volume do tanque são configuráveis.
+- **Gráfico ao vivo:** curva em tempo real de qualquer parâmetro lido, selecionável no topo.
+
 ## Android Auto
 
 O app tem duas interfaces para o carro:
@@ -94,7 +101,7 @@ No carro há quatro abas: **Painel**, **Desempenho**, **Turbo** e **Falhas**.
 - **Falhas:** lê e lista os códigos ao abrir a aba.
 - **Painel** é a lista curada e ordenável: **km/L (fixo no topo)**, **"Piscar no cluster"** logo abaixo e, em seguida, só os itens marcados com ★, na ordem definida por você. No app do celular, cada linha tem **★** (aparece no Painel) e o ícone **≡** para arrastar e ordenar. A ordem do Painel segue essa ordenação (não a ordem em que você marcou), então (des)favoritar mantém cada item no seu lugar. Reordenar ou marcar no celular atualiza o Painel do Android Auto na hora.
 - **Todos** lista todos os parâmetros do carro (referência), sem personalização.
-- **Painel no player ("tocando agora"):** a capa é uma imagem desenhada ao vivo, com fundo em gradiente — arco de **velocidade (0–240 km/h)** com cor por faixa e, abaixo, km/L (em destaque), rotação, temperatura do motor e o **último 0–100 abaixo de 10s**. Atualiza a cada 0,2 s.
+- **Painel no player ("tocando agora"):** a capa é uma imagem desenhada ao vivo, com fundo em gradiente — arco de **velocidade (0–240 km/h)** com cor por faixa e, abaixo, km/L (em destaque), duas células que fazem **rodízio** entre rotação, motor, intercooler, admissão, torque e MAP (troca a cada 3 s, só entre os parâmetros presentes) e o **último 0–100 abaixo de 10s**. O **subtítulo do player** também faz rodízio, alternando entre motor/rotação, turbo/intercooler e consumo/velocidade. Acima de **80 km/h** a imagem ganha uma borda e um brilho vermelhos (que o Android Auto reflete no fundo), com intensidade crescente até 120 km/h. Atualiza a cada 0,2 s.
 - **Piscar no cluster:** o painel do carro espelha o título do "tocando agora". Por padrão o título fica fixo ("OBD Pulse"). Você pode escolher uma informação para piscar no cluster — no app do celular (lista "Piscar no cluster") ou no Android Auto (Painel → "Piscar no cluster"); a escolha fica sincronizada entre os dois. **Cada 0–100 km/h abaixo de 10s pisca o tempo obtido** por alguns segundos — mas só quando **não** há uma informação fixa selecionada (a fixa tem prioridade e não é interrompida).
 
 Limitações: a interface é de player (sem áudio), e o Android Auto trata o OBD Pulse como a fonte de mídia atual enquanto ele está aberto. Dependendo da versão do Android Auto, isso pode interferir no app de música.
