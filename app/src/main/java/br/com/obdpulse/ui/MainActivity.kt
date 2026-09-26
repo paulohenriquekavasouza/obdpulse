@@ -45,6 +45,7 @@ class MainActivity : Activity() {
     private var favorites: List<String> = emptyList()
     private var lastState = ObdState()
     private var dragging = false
+    private var clusterListener: android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
 
     private lateinit var status: TextView
     private lateinit var devices: Spinner
@@ -126,12 +127,23 @@ class MainActivity : Activity() {
 
     override fun onStart() {
         super.onStart()
+        syncClusterSelection()
+        clusterListener = Prefs.observe(this) { key ->
+            if (key == Prefs.KEY_CLUSTER) runOnUiThread { syncClusterSelection() }
+        }
         stateJob = scope.launch { ObdManager.state.collect(::render) }
     }
 
     override fun onStop() {
         stateJob?.cancel()
+        clusterListener?.let { Prefs.removeObserver(this, it) }
+        clusterListener = null
         super.onStop()
+    }
+
+    private fun syncClusterSelection() {
+        val target = clusterKeys.indexOf(Prefs.clusterMetric(this)).coerceAtLeast(0)
+        if (clusterMetric.selectedItemPosition != target) clusterMetric.setSelection(target)
     }
 
     override fun onDestroy() {

@@ -8,10 +8,10 @@ import br.com.obdpulse.obd.Keys
 object Prefs {
     private const val FILE = "obd_pulse"
     private const val KEY_ADDRESS = "address"
-    private const val KEY_FAVORITES = "favorites"
+    const val KEY_FAVORITES = "favorites"
     private const val KEY_PROTOCOL = "protocol"
-    private const val KEY_CLUSTER = "cluster_metric"
-    private const val KEY_ORDER = "todos_order"
+    const val KEY_CLUSTER = "cluster_metric"
+    const val KEY_ORDER = "todos_order"
     const val CLUSTER_NONE = ""
     private val DEFAULT_FAVORITES = listOf(Keys.BOOST, "0C", "0D", "05", Keys.CONSUMPTION, "77", "52", "42")
 
@@ -35,6 +35,16 @@ object Prefs {
 
     fun saveClusterMetric(context: Context, key: String) {
         prefs(context).edit { putString(KEY_CLUSTER, key) }
+    }
+
+    fun observe(context: Context, onChanged: (String?) -> Unit): SharedPreferences.OnSharedPreferenceChangeListener {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key -> onChanged(key) }
+        prefs(context).registerOnSharedPreferenceChangeListener(listener)
+        return listener
+    }
+
+    fun removeObserver(context: Context, listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        prefs(context).unregisterOnSharedPreferenceChangeListener(listener)
     }
 
     fun order(context: Context): List<String> =

@@ -46,19 +46,15 @@ object MediaContent {
         )
         DASHBOARD -> buildList {
             add(valueEntry(Keys.CONSUMPTION, state))
+            add(MediaEntry(CLUSTER, "Piscar no cluster", clusterLabel(clusterMetric), browsable = true))
             add(MediaEntry(STATUS, "Status", status(state)))
-            for (key in visibleFavorites(state, favorites).filter { it != Keys.CONSUMPTION }) add(valueEntry(key, state))
-            val count = state.values.count { it.key != Keys.CONSUMPTION }
-            add(MediaEntry(ALL, "Todos os parâmetros", "$count valores", browsable = true))
+            val marked = visibleFavorites(state, favorites).filter { it != Keys.CONSUMPTION }
+            for (key in Prefs.orderedKeys(order, marked)) add(valueEntry(key, state))
+            add(MediaEntry(ALL, "Todos os parâmetros", "${state.values.size} valores", browsable = true))
         }
         PERFORMANCE -> performanceEntries(state)
         TURBO -> turboEntries(state)
-        ALL -> buildList {
-            add(valueEntry(Keys.CONSUMPTION, state))
-            add(MediaEntry(CLUSTER, "Piscar no cluster", clusterLabel(clusterMetric), browsable = true))
-            val others = state.values.map { it.key }.filter { it != Keys.CONSUMPTION }
-            for (key in Prefs.orderedKeys(order, others)) add(valueEntry(key, state))
-        }
+        ALL -> state.values.map { MediaEntry(VALUE_PREFIX + it.key, it.name, format(it)) }
         DTC -> dtcEntries(state)
         CLUSTER -> clusterEntries(favorites, clusterMetric)
         else -> emptyList()

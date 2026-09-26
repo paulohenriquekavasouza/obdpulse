@@ -33,15 +33,17 @@ class MediaContentTest {
     }
 
     @Test
-    fun dashboardShowsConsumptionStatusAndOnlyMarkedFavorites() {
+    fun dashboardHasClusterBelowConsumptionThenStatusAndMarked() {
         val dashboard = MediaContent.children(MediaContent.DASHBOARD, connected, favorites)
         assertEquals(
-            listOf("value:${Keys.CONSUMPTION}", "status", "value:BOOST", "value:0C", "value:0D", MediaContent.ALL),
+            listOf(
+                "value:${Keys.CONSUMPTION}", MediaContent.CLUSTER, "status",
+                "value:BOOST", "value:0C", "value:0D", MediaContent.ALL,
+            ),
             dashboard.map { it.id },
         )
         assertEquals("Consumo em km/L", dashboard[0].title)
-        assertEquals("0,85 bar", dashboard[2].subtitle)
-        assertTrue(dashboard.none { it.id == MediaContent.CLUSTER })
+        assertTrue(dashboard[1].browsable)
         assertTrue(dashboard.first { it.id == MediaContent.ALL }.browsable)
     }
 
@@ -50,8 +52,17 @@ class MediaContentTest {
         val marked = listOf(Keys.BOOST)
         val dashboard = MediaContent.children(MediaContent.DASHBOARD, connected, marked)
         assertEquals(
-            listOf("value:${Keys.CONSUMPTION}", "status", "value:BOOST", MediaContent.ALL),
+            listOf("value:${Keys.CONSUMPTION}", MediaContent.CLUSTER, "status", "value:BOOST", MediaContent.ALL),
             dashboard.map { it.id },
+        )
+    }
+
+    @Test
+    fun dashboardOrdersMarkedBySavedOrder() {
+        val dashboard = MediaContent.children(MediaContent.DASHBOARD, connected, favorites, order = listOf("0D", "0C"))
+        assertEquals(
+            listOf("value:0D", "value:0C", "value:BOOST"),
+            dashboard.filter { it.id.startsWith("value:") && it.id != "value:${Keys.CONSUMPTION}" }.map { it.id },
         )
     }
 
@@ -59,22 +70,18 @@ class MediaContentTest {
     fun dashboardKeepsAllFavoritesWhileDisconnected() {
         val dashboard = MediaContent.children(MediaContent.DASHBOARD, ObdState(), favorites)
         assertEquals("value:${Keys.CONSUMPTION}", dashboard[0].id)
-        assertEquals("status", dashboard[1].id)
+        assertEquals(MediaContent.CLUSTER, dashboard[1].id)
+        assertEquals("status", dashboard[2].id)
         assertEquals(MediaContent.ALL, dashboard.last().id)
-        assertEquals(7, dashboard.size)
+        assertEquals(8, dashboard.size)
         assertEquals("—", dashboard[0].subtitle)
     }
 
     @Test
-    fun allTabPinsConsumptionAndClusterThenOrdersRest() {
-        val ordered = MediaContent.children(
-            MediaContent.ALL, connected, favorites, order = listOf("0D", "0C"),
-        )
-        assertEquals(
-            listOf("value:${Keys.CONSUMPTION}", MediaContent.CLUSTER, "value:0D", "value:0C", "value:BOOST"),
-            ordered.map { it.id },
-        )
-        assertTrue(ordered[1].browsable)
+    fun allTabListsAllValuesWithoutPinsOrCluster() {
+        val entries = MediaContent.children(MediaContent.ALL, connected, favorites)
+        assertEquals(listOf("value:BOOST", "value:0C", "value:0D"), entries.map { it.id })
+        assertTrue(entries.none { it.id == MediaContent.CLUSTER })
     }
 
     @Test

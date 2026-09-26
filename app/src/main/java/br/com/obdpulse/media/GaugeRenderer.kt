@@ -2,14 +2,19 @@ package br.com.obdpulse.media
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.RectF
+import android.graphics.Shader
 import android.graphics.Typeface
 import androidx.core.graphics.createBitmap
 
 class GaugeRenderer {
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val background = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        shader = LinearGradient(0f, 0f, 0f, SIZE.toFloat(), BG_TOP, BG_BOTTOM, Shader.TileMode.CLAMP)
+    }
     private val arc = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
@@ -29,9 +34,7 @@ class GaugeRenderer {
     fun render(data: GaugeData): Bitmap {
         val bitmap = createBitmap(SIZE, SIZE)
         val canvas = Canvas(bitmap)
-        fill.color = BACKGROUND
-        fill.style = Paint.Style.FILL
-        canvas.drawRect(0f, 0f, SIZE.toFloat(), SIZE.toFloat(), fill)
+        canvas.drawRect(0f, 0f, SIZE.toFloat(), SIZE.toFloat(), background)
 
         drawArc(canvas, data)
         drawGrid(canvas, data)
@@ -95,7 +98,8 @@ class GaugeRenderer {
         const val ROW1 = 336f
         const val ROW2 = 428f
 
-        const val BACKGROUND = 0xFF0E0E10.toInt()
+        const val BG_TOP = 0xFF1B2330.toInt()
+        const val BG_BOTTOM = 0xFF08090C.toInt()
         const val TRACK = 0xFF2A2A2E.toInt()
         const val WHITE = 0xFFFFFFFF.toInt()
         const val MUTED = 0xFF9AA0A6.toInt()

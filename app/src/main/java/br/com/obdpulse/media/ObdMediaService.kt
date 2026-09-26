@@ -40,6 +40,8 @@ class ObdMediaService : MediaBrowserService() {
     private var flashText: String? = null
     private var flashUntil = 0L
 
+    private var prefsListener: android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
+
     internal var lastPlaybackState: PlaybackState? = null
         private set
     internal var lastMetadata: MediaMetadata? = null
@@ -60,10 +62,21 @@ class ObdMediaService : MediaBrowserService() {
         sessionToken = session.sessionToken
         render(ObdManager.state.value)
         scope.launch { ObdManager.state.collect { scheduleRender() } }
+        prefsListener = Prefs.observe(this) { key ->
+            when (key) {
+                Prefs.KEY_ORDER, Prefs.KEY_FAVORITES -> notifyChildrenChanged(MediaContent.DASHBOARD)
+                Prefs.KEY_CLUSTER -> {
+                    notifyChildrenChanged(MediaContent.DASHBOARD)
+                    notifyChildrenChanged(MediaContent.CLUSTER)
+                    render(ObdManager.state.value)
+                }
+            }
+        }
     }
 
     override fun onDestroy() {
         scope.cancel()
+        prefsListener?.let { Prefs.removeObserver(this, it) }
         session.release()
         super.onDestroy()
     }
@@ -246,7 +259,7 @@ class ObdMediaService : MediaBrowserService() {
         const val TITLE = "OBD Pulse"
         val TRANSPORT_ACTIONS = PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or
             PlaybackState.ACTION_PLAY_FROM_MEDIA_ID or PlaybackState.ACTION_PLAY_FROM_SEARCH
-        const val RENDER_INTERVAL = 500L
+        const val RENDER_INTERVAL = 200L
         const val CHILDREN_INTERVAL = 1_000L
         const val FLASH_MS = 6_000L
         const val CONTENT_STYLE_SUPPORTED = "android.media.browse.CONTENT_STYLE_SUPPORTED"
