@@ -32,14 +32,17 @@ class MetricAdapter(
     override fun getItemViewType(position: Int): Int = if (keys[position] == Keys.CONSUMPTION) TYPE_PINNED else TYPE_NORMAL
 
     fun submit(newKeys: List<String>, newValues: Map<String, LiveValue>, newFavorites: Set<String>) {
+        val favoritesChanged = newFavorites != favorites
         values = newValues
         favorites = newFavorites
-        if (keys != newKeys) {
-            keys.clear()
-            keys.addAll(newKeys)
-            notifyDataSetChanged()
-        } else {
-            notifyItemRangeChanged(0, keys.size, PAYLOAD_VALUE)
+        when {
+            keys != newKeys -> {
+                keys.clear()
+                keys.addAll(newKeys)
+                notifyDataSetChanged()
+            }
+            favoritesChanged -> notifyItemRangeChanged(0, keys.size)
+            else -> notifyItemRangeChanged(0, keys.size, PAYLOAD_VALUE)
         }
     }
 
