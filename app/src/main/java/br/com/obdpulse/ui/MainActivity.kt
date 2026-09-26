@@ -14,16 +14,18 @@ import android.os.Bundle
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
-import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import br.com.obdpulse.ObdManager
 import br.com.obdpulse.Prefs
 import br.com.obdpulse.R
 import br.com.obdpulse.obd.DtcCode
+import br.com.obdpulse.obd.Keys
 import br.com.obdpulse.obd.Labels
-import br.com.obdpulse.obd.LiveValue
 import br.com.obdpulse.obd.ObdState
 import br.com.obdpulse.obd.ObdStatus
 import br.com.obdpulse.media.MediaContent
@@ -36,14 +38,13 @@ import kotlinx.coroutines.launch
 class MainActivity : Activity() {
 
     private class PairedDevice(val name: String, val address: String)
-    private class ValueRow(val name: TextView, val value: TextView)
 
     private val scope = MainScope()
     private var stateJob: Job? = null
     private var pairedDevices: List<PairedDevice> = emptyList()
-    private val rows = LinkedHashMap<String, ValueRow>()
-    private var renderedKeys: List<String> = emptyList()
     private var favorites: List<String> = emptyList()
+    private var lastState = ObdState()
+    private var dragging = false
 
     private lateinit var status: TextView
     private lateinit var devices: Spinner
@@ -52,8 +53,10 @@ class MainActivity : Activity() {
     private lateinit var copyDiagnostics: Button
     private lateinit var info: TextView
     private lateinit var dtc: TextView
-    private lateinit var valuesContainer: LinearLayout
     private lateinit var clusterMetric: Spinner
+    private lateinit var metrics: RecyclerView
+    private lateinit var adapter: MetricAdapter
+    private lateinit var touchHelper: ItemTouchHelper
     private var clusterKeys: List<String> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,9 +69,24 @@ class MainActivity : Activity() {
         copyDiagnostics = findViewById(R.id.copy_diagnostics)
         info = findViewById(R.id.info)
         dtc = findViewById(R.id.dtc)
-        valuesContainer = findViewById(R.id.values)
         clusterMetric = findViewById(R.id.cluster_metric)
+        metrics = findViewById(R.id.metrics)
         favorites = Prefs.favorites(this)
+
+        adapter = MetricAdapter(
+            onStartDrag = { touchHelper.startDrag(it) },
+            onToggleFavorite = { key ->
+                favorites = Prefs.toggleFavorite(this, key)
+                submitMetrics(lastState)
+            },
+            onOrderChanged = { Prefs.saveOrder(this, it) },
+        )
+        metrics.layoutManager = LinearLayoutManager(this)
+        metrics.adapter = adapter
+        touchHelper = ItemTouchHelper(
+            MetricTouchCallback(adapter) { dragging = it },
+        )
+        touchHelper.attachToRecyclerView(metrics)
 
         connect.setOnClickListener { toggleConnection() }
         readDtc.setOnClickListener { ObdManager.requestDtcs() }
@@ -199,6 +217,7 @@ class MainActivity : Activity() {
     }
 
     private fun render(state: ObdState) {
+        lastState = state
         status.update(
             when (state.status) {
                 ObdStatus.DISCONNECTED -> getString(R.string.status_disconnected)
@@ -213,7 +232,21 @@ class MainActivity : Activity() {
         readDtc.isEnabled = state.status == ObdStatus.CONNECTED && !state.dtcLoading
         info.update(infoText(state))
         dtc.update(dtcText(state))
-        renderValues(state.values)
+        submitMetrics(state)
+    }
+
+    private fun submitMetrics(state: ObdState) {
+        if (dragging) return
+        val values = state.values.associateBy { it.key }
+        val savedOrder = Prefs.order(this)
+        val liveKeys = state.values.map { it.key }.filter { it != Keys.CONSUMPTION }
+        val available = if (liveKeys.isNotEmpty()) {
+            liveKeys
+        } else {
+            (savedOrder + favorites).distinct().filter { it != Keys.CONSUMPTION }
+        }
+        val ordered = listOf(Keys.CONSUMPTION) + Prefs.orderedKeys(savedOrder, available)
+        adapter.submit(ordered, values, favorites.toSet())
     }
 
     private fun TextView.update(value: CharSequence) {
@@ -247,35 +280,6 @@ class MainActivity : Activity() {
             line(R.string.dtc_pending, report.pending),
             line(R.string.dtc_permanent, report.permanent),
         ).joinToString("\n")
-    }
-
-    private fun renderValues(values: List<LiveValue>) {
-        val keys = values.map { it.key }
-        if (keys != renderedKeys) {
-            valuesContainer.removeAllViews()
-            rows.clear()
-            for (value in values) {
-                val row = layoutInflater.inflate(R.layout.item_value, valuesContainer, false)
-                row.setOnClickListener {
-                    favorites = Prefs.toggleFavorite(this, value.key)
-                    refreshLabels()
-                }
-                valuesContainer.addView(row)
-                rows[value.key] = ValueRow(row.findViewById(R.id.name), row.findViewById(R.id.value))
-            }
-            renderedKeys = keys
-            refreshLabels()
-        }
-        for (value in values) {
-            rows[value.key]?.value?.update(getString(R.string.value_with_unit, value.text, value.unit).trim())
-        }
-    }
-
-    private fun refreshLabels() {
-        for ((key, row) in rows) {
-            val label = Labels.name(key)
-            row.name.text = if (key in favorites) "★ $label" else label
-        }
     }
 
     companion object {

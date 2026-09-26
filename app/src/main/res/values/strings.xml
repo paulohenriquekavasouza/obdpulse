@@ -7,7 +7,7 @@
     <string name="read_dtc">Ler falhas</string>
     <string name="refresh">Atualizar</string>
     <string name="none">nenhuma</string>
-    <string name="favorites_hint">Toque em um item para mostrá-lo (★) ou ocultá-lo no Android Auto.</string>
+    <string name="favorites_hint">★ mostra o item no Painel do Android Auto. Arraste pelo ≡ para ordenar a aba Todos (km/L fica sempre no topo).</string>
     <string name="cluster_label">Piscar no cluster (informação mostrada no painel do carro):</string>
     <string name="cluster_none">Nenhuma (só 0–100)</string>
 

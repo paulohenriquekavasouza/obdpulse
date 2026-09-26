@@ -1,5 +1,6 @@
 package br.com.obdpulse.media
 
+import br.com.obdpulse.Prefs
 import br.com.obdpulse.Prefs.CLUSTER_NONE
 import br.com.obdpulse.obd.Format
 import br.com.obdpulse.obd.Keys
@@ -35,6 +36,7 @@ object MediaContent {
         state: ObdState,
         favorites: List<String>,
         clusterMetric: String = "",
+        order: List<String> = emptyList(),
     ): List<MediaEntry> = when (parentId) {
         ROOT -> listOf(
             MediaEntry(DASHBOARD, "Painel", status(state), browsable = true),
@@ -43,17 +45,20 @@ object MediaContent {
             MediaEntry(DTC, "Falhas", dtcSummary(state), browsable = true),
         )
         DASHBOARD -> buildList {
-            val keys = (listOf(Keys.CONSUMPTION) + visibleFavorites(state, favorites)).distinct()
             add(valueEntry(Keys.CONSUMPTION, state))
             add(MediaEntry(STATUS, "Status", status(state)))
-            for (key in keys.drop(1)) add(valueEntry(key, state))
+            for (key in visibleFavorites(state, favorites).filter { it != Keys.CONSUMPTION }) add(valueEntry(key, state))
             val count = state.values.count { it.key != Keys.CONSUMPTION }
             add(MediaEntry(ALL, "Todos os parâmetros", "$count valores", browsable = true))
-            add(MediaEntry(CLUSTER, "Piscar no cluster", clusterLabel(clusterMetric), browsable = true))
         }
         PERFORMANCE -> performanceEntries(state)
         TURBO -> turboEntries(state)
-        ALL -> state.values.filter { it.key != Keys.CONSUMPTION }.map { MediaEntry(VALUE_PREFIX + it.key, it.name, format(it)) }
+        ALL -> buildList {
+            add(valueEntry(Keys.CONSUMPTION, state))
+            add(MediaEntry(CLUSTER, "Piscar no cluster", clusterLabel(clusterMetric), browsable = true))
+            val others = state.values.map { it.key }.filter { it != Keys.CONSUMPTION }
+            for (key in Prefs.orderedKeys(order, others)) add(valueEntry(key, state))
+        }
         DTC -> dtcEntries(state)
         CLUSTER -> clusterEntries(favorites, clusterMetric)
         else -> emptyList()

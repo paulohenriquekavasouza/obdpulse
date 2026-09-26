@@ -13,8 +13,8 @@ android {
         applicationId = "br.com.obdpulse"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "1.9"
+        versionCode = 11
+        versionName = "2.0"
     }
 
     buildTypes {
@@ -44,6 +44,7 @@ kotlin {
 
 dependencies {
     implementation("androidx.car.app:app:1.7.0")
+    implementation("androidx.recyclerview:recyclerview:1.4.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     testImplementation("junit:junit:4.13.2")

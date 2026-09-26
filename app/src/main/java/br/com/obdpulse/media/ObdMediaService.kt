@@ -83,7 +83,9 @@ class ObdMediaService : MediaBrowserService() {
         if (parentId == MediaContent.DTC && state.status == ObdStatus.CONNECTED && state.dtcs == null && !state.dtcLoading) {
             ObdManager.requestDtcs()
         }
-        val children = MediaContent.children(parentId, state, Prefs.favorites(this), Prefs.clusterMetric(this))
+        val children = MediaContent.children(
+            parentId, state, Prefs.favorites(this), Prefs.clusterMetric(this), Prefs.order(this),
+        )
         result.sendResult(children.map(::toItem).toMutableList())
     }
 
@@ -184,20 +186,23 @@ class ObdMediaService : MediaBrowserService() {
 
     private fun clusterTitle(state: ObdState): String {
         val now = SystemClock.elapsedRealtime()
+        val metric = Prefs.clusterMetric(this)
         val sub10 = state.trip.lastSub10Ms
-        if (sub10 != null && sub10 != lastSeenSub10) {
+        if (metric.isBlank() && sub10 != null && sub10 != lastSeenSub10) {
             flashText = "0–100: ${Format.number(sub10 / 1000.0, 1)} s"
             flashUntil = now + FLASH_MS
         }
         lastSeenSub10 = sub10
-        flashText?.let { if (now < flashUntil) return it }
 
-        val metric = Prefs.clusterMetric(this)
-        if (metric.isNotBlank() && state.status == ObdStatus.CONNECTED) {
-            state.values.firstOrNull { it.key == metric }?.let {
-                return "${Labels.short(metric)} ${it.text} ${it.unit}".trim()
+        if (metric.isNotBlank()) {
+            if (state.status == ObdStatus.CONNECTED) {
+                state.values.firstOrNull { it.key == metric }?.let {
+                    return "${Labels.short(metric)} ${it.text} ${it.unit}".trim()
+                }
             }
+            return TITLE
         }
+        flashText?.let { if (now < flashUntil) return it }
         return TITLE
     }
 

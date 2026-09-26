@@ -92,9 +92,10 @@ No carro há quatro abas: **Painel**, **Desempenho**, **Turbo** e **Falhas**.
 - **Desempenho:** cronômetro de **0–100 km/h** (melhor e última), velocidade/rotação/turbo/temperatura máximas da viagem e média de km/L. Zera a cada nova conexão.
 - **Turbo:** boost atual e máximo, pressão no coletor (MAP), pressão barométrica e temperatura do intercooler.
 - **Falhas:** lê e lista os códigos ao abrir a aba.
-- **Painel, Desempenho e Turbo** atualizam os valores ao vivo. A aba **Todos** fica congelada para a rolagem não voltar ao topo; mostra os valores de quando foi aberta e atualiza ao reabrir. O **Consumo em km/L** fica na aba **Desempenho** (saiu da Todos), além de continuar em destaque no Painel e no player.
-- **Painel no player ("tocando agora"):** a capa é uma imagem desenhada ao vivo — arco de **velocidade (0–240 km/h)** com cor por faixa e, abaixo, km/L (em destaque), rotação, temperatura do motor e o **último 0–100 abaixo de 10s**. A imagem é atualizada a cada meio segundo.
-- **Piscar no cluster:** o painel do carro espelha o título do "tocando agora". Por padrão o título fica fixo ("OBD Pulse") e não pisca. Você pode escolher uma informação para aparecer/piscar no cluster — no app do celular (lista "Piscar no cluster") ou no próprio Android Auto (Painel → "Piscar no cluster"). Além disso, **cada 0–100 km/h abaixo de 10s pisca automaticamente** o tempo obtido no cluster por alguns segundos.
+- **Painel** mostra só os itens marcados com ★ (mais km/L no topo e o Status). **Marque no app do celular** quais itens aparecem: cada linha tem uma ★.
+- **Todos** é a lista completa e personalizável: **km/L fixo no topo**, **"Piscar no cluster" fixo em seguida** e o restante na ordem que você definir. **A ordem é definida no app do celular, arrastando pelo ícone ≡.** Atualiza ao vivo.
+- **Painel no player ("tocando agora"):** a capa é uma imagem desenhada ao vivo — arco de **velocidade (0–240 km/h)** com cor por faixa e, abaixo, km/L (em destaque), rotação, temperatura do motor e o **último 0–100 abaixo de 10s**. Atualiza a cada meio segundo.
+- **Piscar no cluster:** o painel do carro espelha o título do "tocando agora". Por padrão o título fica fixo ("OBD Pulse"). Você pode escolher uma informação para piscar no cluster — no app do celular (lista "Piscar no cluster") ou no Android Auto (aba Todos → "Piscar no cluster"). **Cada 0–100 km/h abaixo de 10s pisca o tempo obtido** por alguns segundos — mas só quando **não** há uma informação fixa selecionada (a informação fixa tem prioridade e não é interrompida).
 
 Limitações: a interface é de player (sem áudio), e o Android Auto trata o OBD Pulse como a fonte de mídia atual enquanto ele está aberto. Dependendo da versão do Android Auto, isso pode interferir no app de música.
 

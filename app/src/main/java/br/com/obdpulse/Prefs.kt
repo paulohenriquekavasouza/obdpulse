@@ -11,6 +11,7 @@ object Prefs {
     private const val KEY_FAVORITES = "favorites"
     private const val KEY_PROTOCOL = "protocol"
     private const val KEY_CLUSTER = "cluster_metric"
+    private const val KEY_ORDER = "todos_order"
     const val CLUSTER_NONE = ""
     private val DEFAULT_FAVORITES = listOf(Keys.BOOST, "0C", "0D", "05", Keys.CONSUMPTION, "77", "52", "42")
 
@@ -35,6 +36,16 @@ object Prefs {
     fun saveClusterMetric(context: Context, key: String) {
         prefs(context).edit { putString(KEY_CLUSTER, key) }
     }
+
+    fun order(context: Context): List<String> =
+        prefs(context).getString(KEY_ORDER, null)?.split(',')?.filter { it.isNotBlank() } ?: emptyList()
+
+    fun saveOrder(context: Context, keys: List<String>) {
+        prefs(context).edit { putString(KEY_ORDER, keys.joinToString(",")) }
+    }
+
+    fun orderedKeys(saved: List<String>, available: List<String>): List<String> =
+        saved.filter { it in available } + available.filter { it !in saved }
 
     fun favorites(context: Context): List<String> =
         prefs(context).getString(KEY_FAVORITES, null)
