@@ -33,18 +33,17 @@ class MediaContentTest {
     }
 
     @Test
-    fun dashboardHasClusterBelowConsumptionThenStatusAndMarked() {
+    fun dashboardHasClusterBelowConsumptionThenMarkedWithoutStatus() {
         val dashboard = MediaContent.children(MediaContent.DASHBOARD, connected, favorites)
         assertEquals(
             listOf(
-                "value:${Keys.CONSUMPTION}", MediaContent.CLUSTER, "status",
+                "value:${Keys.CONSUMPTION}", MediaContent.CLUSTER,
                 "value:BOOST", "value:0C", "value:0D", MediaContent.ALL,
             ),
             dashboard.map { it.id },
         )
-        assertEquals("Consumo em km/L", dashboard[0].title)
+        assertTrue(dashboard.none { it.id == "status" })
         assertTrue(dashboard[1].browsable)
-        assertTrue(dashboard.first { it.id == MediaContent.ALL }.browsable)
     }
 
     @Test
@@ -52,7 +51,7 @@ class MediaContentTest {
         val marked = listOf(Keys.BOOST)
         val dashboard = MediaContent.children(MediaContent.DASHBOARD, connected, marked)
         assertEquals(
-            listOf("value:${Keys.CONSUMPTION}", MediaContent.CLUSTER, "status", "value:BOOST", MediaContent.ALL),
+            listOf("value:${Keys.CONSUMPTION}", MediaContent.CLUSTER, "value:BOOST", MediaContent.ALL),
             dashboard.map { it.id },
         )
     }
@@ -67,13 +66,22 @@ class MediaContentTest {
     }
 
     @Test
+    fun refavoritingKeepsBaseOrderNotToggleOrder() {
+        val marked = listOf("0D", Keys.BOOST)
+        val dashboard = MediaContent.children(MediaContent.DASHBOARD, connected, marked)
+        assertEquals(
+            listOf("value:BOOST", "value:0D"),
+            dashboard.filter { it.id.startsWith("value:") && it.id != "value:${Keys.CONSUMPTION}" }.map { it.id },
+        )
+    }
+
+    @Test
     fun dashboardKeepsAllFavoritesWhileDisconnected() {
         val dashboard = MediaContent.children(MediaContent.DASHBOARD, ObdState(), favorites)
         assertEquals("value:${Keys.CONSUMPTION}", dashboard[0].id)
         assertEquals(MediaContent.CLUSTER, dashboard[1].id)
-        assertEquals("status", dashboard[2].id)
         assertEquals(MediaContent.ALL, dashboard.last().id)
-        assertEquals(8, dashboard.size)
+        assertEquals(7, dashboard.size)
         assertEquals("—", dashboard[0].subtitle)
     }
 

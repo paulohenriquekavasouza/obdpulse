@@ -47,9 +47,10 @@ object MediaContent {
         DASHBOARD -> buildList {
             add(valueEntry(Keys.CONSUMPTION, state))
             add(MediaEntry(CLUSTER, "Piscar no cluster", clusterLabel(clusterMetric), browsable = true))
-            add(MediaEntry(STATUS, "Status", status(state)))
-            val marked = visibleFavorites(state, favorites).filter { it != Keys.CONSUMPTION }
-            for (key in Prefs.orderedKeys(order, marked)) add(valueEntry(key, state))
+            val marked = visibleFavorites(state, favorites).filter { it != Keys.CONSUMPTION }.toSet()
+            val base = state.values.map { it.key }.filter { it != Keys.CONSUMPTION }
+                .ifEmpty { favorites.filter { it != Keys.CONSUMPTION } }
+            for (key in Prefs.orderedKeys(order, base).filter { it in marked }) add(valueEntry(key, state))
             add(MediaEntry(ALL, "Todos os parâmetros", "${state.values.size} valores", browsable = true))
         }
         PERFORMANCE -> performanceEntries(state)
