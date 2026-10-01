@@ -49,6 +49,6 @@ class ObdMediaServiceTest {
         shadowOf(Looper.getMainLooper()).idle()
 
         assertEquals(PlaybackState.STATE_ERROR, service.lastPlaybackState!!.state)
-        assertEquals("Escolha o leitor no app do celular primeiro", service.lastPlaybackState!!.errorMessage.toString())
+        assertEquals("Escolha o adaptador no app do celular primeiro", service.lastPlaybackState!!.errorMessage.toString())
     }
 }

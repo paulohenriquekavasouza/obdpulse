@@ -145,8 +145,8 @@ object MediaContent {
 
     fun status(state: ObdState): String = when (state.status) {
         ObdStatus.DISCONNECTED -> "Desconectado · toque em play para conectar"
-        ObdStatus.CONNECTING -> "Conectando ao leitor…"
-        ObdStatus.INITIALIZING -> "Comunicando com o veículo…"
+        ObdStatus.CONNECTING -> "Conectando ao adaptador…"
+        ObdStatus.INITIALIZING -> "Lendo o veículo…"
         ObdStatus.CONNECTED -> if (state.milOn == true) "Conectado · luz de falha acesa" else "Conectado"
         ObdStatus.ERROR -> state.message ?: "Erro de comunicação"
     }

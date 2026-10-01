@@ -165,7 +165,7 @@ object Pids {
 object Labels {
     fun name(key: String): String = when (key) {
         Keys.BOOST -> "Pressão do turbo (calculada)"
-        Keys.BATTERY -> "Tensão da bateria (leitor)"
+        Keys.BATTERY -> "Tensão da bateria (adaptador)"
         Keys.CONSUMPTION -> "Consumo em km/L"
         else -> Pids.byKey[key]?.name ?: key
     }

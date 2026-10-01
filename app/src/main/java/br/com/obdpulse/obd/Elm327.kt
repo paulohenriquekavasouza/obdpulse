@@ -41,7 +41,7 @@ class Elm327(
                     }
                 }
             }
-            replies.close(IOException("Conexão com o leitor encerrada"))
+            replies.close(IOException("Conexão com o adaptador encerrada"))
         } catch (e: IOException) {
             replies.close(e)
         }

@@ -156,6 +156,103 @@ class ObdEngine(
         _state.update { it.copy(undecoded = result) }
     }
 
+    suspend fun probe(responseHeader: String, service: Int, pid: Int, timeoutMs: Long = PROBE_TIMEOUT): ProbeResult {
+        val command = "%02X".format(service) + PidDecoder.pidHex(pid, service)
+        val header = physicalHeader(responseHeader)
+        val rawText = try {
+            requestRaw(header, command, timeoutMs)
+        } catch (e: ElmTimeoutException) {
+            return ProbeResult(command, responseHeader, emptyList(), NO_REPLY, ProbeStatus.NO_REPLY, adapterText = "")
+        }
+        val text = ElmParser.textLines(rawText).joinToString(" | ")
+        val reply = ElmParser.messages(rawText)
+        reply.firstOrNull { it.data.size >= 3 && it.data[0] == 0x7F && it.data[1] == service }?.let {
+            return ProbeResult(command, responseHeader, emptyList(), hex(it.data.toList()), ProbeStatus.NEGATIVE, it.data[2], text)
+        }
+        val positive = service + 0x40
+        val skip = if (service == PidDecoder.SERVICE_EXTENDED) 3 else 2
+        val message = reply.firstOrNull {
+            it.data.size >= skip && it.data[0] == positive && matchesPid(it.data, service, pid)
+        }
+        if (message == null) {
+            val any = reply.firstOrNull()
+            return ProbeResult(
+                command, responseHeader, emptyList(),
+                any?.let { hex(it.data.toList()) } ?: NO_REPLY,
+                if (any == null) ProbeStatus.NO_REPLY else ProbeStatus.MISMATCH,
+                adapterText = text,
+            )
+        }
+        return ProbeResult(command, responseHeader, message.data.drop(skip), hex(message.data.toList()), ProbeStatus.OK, adapterText = text)
+    }
+
+    suspend fun startSession(responseHeader: String, sub: Int, timeoutMs: Long = PROBE_TIMEOUT): ProbeResult {
+        val command = "10%02X".format(sub)
+        val header = physicalHeader(responseHeader)
+        val rawText = try {
+            requestRaw(header, command, timeoutMs)
+        } catch (e: ElmTimeoutException) {
+            return ProbeResult(command, responseHeader, emptyList(), NO_REPLY, ProbeStatus.NO_REPLY, adapterText = "")
+        }
+        val text = ElmParser.textLines(rawText).joinToString(" | ")
+        val reply = ElmParser.messages(rawText)
+        reply.firstOrNull { it.data.size >= 3 && it.data[0] == 0x7F && it.data[1] == 0x10 }?.let {
+            return ProbeResult(command, responseHeader, emptyList(), hex(it.data.toList()), ProbeStatus.NEGATIVE, it.data[2], text)
+        }
+        val message = reply.firstOrNull { it.data.size >= 2 && it.data[0] == 0x50 && it.data[1] == sub }
+        return if (message != null) {
+            ProbeResult(command, responseHeader, message.data.drop(2), hex(message.data.toList()), ProbeStatus.OK, adapterText = text)
+        } else {
+            ProbeResult(command, responseHeader, emptyList(), text.ifEmpty { NO_REPLY }, ProbeStatus.NO_REPLY, adapterText = text)
+        }
+    }
+
+    val extendedAddressing: Boolean get() = extendedIds
+
+    suspend fun pingEcu(txId: Int, timeoutMs: Long = PROBE_TIMEOUT): EcuPing {
+        val header = if (extendedIds) "DA%02XF1".format(txId) else "%03X".format(txId)
+        val expected = if (extendedIds) "18DAF1%02X".format(txId) else "%03X".format(txId + 8)
+        for (command in ECU_PINGS) {
+            val rawText = try {
+                requestRaw(header, command, timeoutMs)
+            } catch (e: ElmTimeoutException) {
+                continue
+            }
+            val message = ElmParser.messages(rawText)
+                .firstOrNull { it.header.equals(expected, ignoreCase = true) } ?: continue
+            return EcuPing(txId, message.header, "$command → ${hex(message.data.toList())}")
+        }
+        return EcuPing(txId, null, null)
+    }
+
+    suspend fun testerPresent(responseHeader: String) {
+        try {
+            requestRaw(physicalHeader(responseHeader), "3E00", PROBE_TIMEOUT)
+        } catch (_: ElmTimeoutException) {
+        }
+    }
+
+    suspend fun setFastScanTiming(fast: Boolean) {
+        lock.withLock {
+            try {
+                if (fast) {
+                    elm.send("ATAT0")
+                    elm.send("ATST$FAST_ST")
+                } else {
+                    elm.send("ATAT1")
+                }
+            } catch (_: ElmTimeoutException) {
+            }
+        }
+    }
+
+    private fun matchesPid(data: IntArray, service: Int, pid: Int): Boolean =
+        if (service == PidDecoder.SERVICE_EXTENDED) {
+            data.size >= 3 && data[1] == (pid shr 8) and 0xFF && data[2] == pid and 0xFF
+        } else {
+            data.size >= 2 && data[1] == pid and 0xFF
+        }
+
     private fun probeOrder(preferred: Char?): List<Char> =
         (listOfNotNull(preferred) + DEFAULT_PROBES).filter { it != '0' }.distinct()
 
@@ -401,6 +498,9 @@ class ObdEngine(
         private const val SEARCH_TIMEOUT = 15_000L
         private const val INFO_TIMEOUT = 5_000L
         private const val DTC_TIMEOUT = 4_000L
+        private const val PROBE_TIMEOUT = 3_000L
+        private const val FAST_ST = "20"
+        private val ECU_PINGS = listOf("3E00", "1003", "22F190")
         private const val SLOW_EVERY = 10L
         private const val MAX_MISSES = 3
         private const val MAX_FAILED_CYCLES = 5

@@ -18,18 +18,18 @@
     <string name="cluster_none">Nenhuma (só 0–100)</string>
 
     <string name="status_disconnected">Desconectado</string>
-    <string name="status_connecting">Conectando ao leitor…</string>
-    <string name="status_initializing">Comunicando com o veículo…</string>
+    <string name="status_connecting">Conectando ao adaptador…</string>
+    <string name="status_initializing">Lendo o veículo…</string>
     <string name="status_connected">Conectado</string>
     <string name="status_error">Erro: %1$s</string>
 
-    <string name="permission_needed">Conceda a permissão de dispositivos próximos (Bluetooth) para listar o leitor.</string>
+    <string name="permission_needed">Conceda a permissão de dispositivos próximos (Bluetooth) para listar o adaptador.</string>
     <string name="bluetooth_missing">Este aparelho não tem Bluetooth.</string>
     <string name="bluetooth_off">Ative o Bluetooth e toque em Atualizar.</string>
-    <string name="no_paired">Nenhum dispositivo pareado. Pareie o ELM327 nas configurações de Bluetooth (PIN 1234 ou 0000).</string>
-    <string name="select_device">Selecione o leitor OBD</string>
+    <string name="no_paired">Nenhum dispositivo pareado. Pareie o adaptador ELM327 nas configurações de Bluetooth do Android (PIN 1234 ou 0000).</string>
+    <string name="select_device">Selecione o adaptador OBD</string>
 
-    <string name="info_adapter">Leitor: %1$s</string>
+    <string name="info_adapter">Adaptador: %1$s</string>
     <string name="info_protocol">Protocolo: %1$s</string>
     <string name="info_vin">Chassi (VIN): %1$s</string>
     <plurals name="info_ecu">
@@ -64,12 +64,12 @@
     <string name="dtc_permanent">Permanentes</string>
 
     <string name="notification_channel">Conexão OBD</string>
-    <string name="notification_connecting">Conectando ao leitor…</string>
-    <string name="notification_initializing">Comunicando com o veículo…</string>
+    <string name="notification_connecting">Conectando ao adaptador…</string>
+    <string name="notification_initializing">Lendo o veículo…</string>
     <string name="notification_connected">Lendo dados do veículo</string>
     <string name="notification_connected_mil">Lendo dados · luz de falha acesa</string>
 
-    <string name="car_select_device">Escolha o leitor no app do celular primeiro</string>
+    <string name="car_select_device">Escolha o adaptador no app do celular primeiro</string>
 
     <string name="auto_connect">Conectar automaticamente</string>
     <string name="open_records">Recordes</string>
@@ -102,4 +102,41 @@
     <string name="graph_title">Gráfico ao vivo</string>
     <string name="graph_pick">Parâmetro:</string>
     <string name="graph_waiting">Conecte ao veículo para ver o gráfico</string>
+
+    <string name="open_pid_explorer">Explorar PIDs</string>
+    <string name="pid_title">Explorador de PIDs</string>
+    <string name="pid_subtitle">Lê parâmetros que o app ainda não cataloga. O Modo 22 acessa dados do fabricante.</string>
+    <string name="pid_ecu">Central (ECU)</string>
+    <string name="pid_service">Serviço</string>
+    <string name="pid_service_01">Modo 01 (padrão)</string>
+    <string name="pid_service_22">Modo 22 (fabricante)</string>
+    <string name="pid_value_hint">PID em hex (ex.: 1C ou 1956)</string>
+    <string name="pid_read">Ler</string>
+    <string name="pid_monitor">Monitorar</string>
+    <string name="pid_copy">Copiar resultado</string>
+    <string name="pid_copied">Resultado copiado</string>
+    <string name="pid_scan">Varredura automática</string>
+    <string name="pid_scan_hint">Lê os PIDs não catalogados (Modo 01) e varre o Modo 22 em todas as centrais. Ao terminar, use Copiar resultado para exportar. Dica: para comparar valores, rode uma vez, troque de marcha e rode novamente.</string>
+    <string name="pid_session">Sessão estendida (avançado)</string>
+    <string name="pid_session_hint">Necessária para dados do fabricante. Envia comandos de sessão; nada é gravado no carro.</string>
+    <string name="pid_scan_run">Iniciar varredura</string>
+    <string name="pid_scan_stop">Parar</string>
+    <string name="pid_scan_running">Lendo %1$s · %2$04X (encontrados: %3$d)</string>
+    <string name="pid_scan_done">Concluído · %1$d parâmetros encontrados.</string>
+    <string name="pid_scan_stopped">Interrompido · %1$d parâmetros encontrados.</string>
+    <string name="pid_scan_sent">Enviado para o ntfy.</string>
+    <string name="pid_scan_send_failed">Falha ao enviar — use Copiar resultado.</string>
+    <string name="pid_ecu_scan">Varredura de ECUs</string>
+    <string name="pid_ecu_scan_running">Procurando centrais · %1$02X (achadas: %2$d)</string>
+    <string name="pid_ecu_scan_done">Concluído · %1$d centrais responderam.</string>
+    <string name="pid_advanced">Avançado (manual)</string>
+    <string name="pid_result">Resultado</string>
+    <string name="pid_candidates">Interpretações possíveis</string>
+    <string name="pid_undecoded">Não decodificados (Modo 01)</string>
+    <string name="pid_undecoded_refresh">Listar valores brutos</string>
+    <string name="pid_need_connection">Conecte ao veículo para sondar.</string>
+    <string name="pid_invalid">Informe um PID em hexadecimal.</string>
+    <string name="pid_status_no_reply">Sem resposta da central.</string>
+    <string name="pid_status_negative">Recusado pela central (NRC 0x%1$02X).</string>
+    <string name="pid_status_mismatch">Resposta inesperada (não corresponde ao PID).</string>
 </resources>

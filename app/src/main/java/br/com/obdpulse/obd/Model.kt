@@ -76,4 +76,4 @@ object EcuLabels {
 
 class ObdException(message: String) : Exception(message)
 
-class ElmTimeoutException(command: String) : IOException("Sem resposta do leitor para $command")
+class ElmTimeoutException(command: String) : IOException("Sem resposta do adaptador para $command")

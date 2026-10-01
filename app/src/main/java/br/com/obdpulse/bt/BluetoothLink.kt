@@ -56,7 +56,7 @@ class BluetoothLink private constructor(private val socket: BluetoothSocket) : C
                     }
                 }
             }
-            throw IOException("Não foi possível conectar ao leitor. Verifique se ele está pareado e ligado.", lastError)
+            throw IOException("Não foi possível conectar ao adaptador. Verifique se ele está pareado e ligado.", lastError)
         }
     }
 }

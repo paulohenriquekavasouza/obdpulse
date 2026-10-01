@@ -27,6 +27,8 @@ import java.io.IOException
 
 object ObdManager {
 
+    const val DEFAULT_PROBE_TIMEOUT = 3_000L
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _state = MutableStateFlow(ObdState())
     val state: StateFlow<ObdState> = _state.asStateFlow()
@@ -56,6 +58,49 @@ object ObdManager {
         if (_state.value.status != ObdStatus.CONNECTED) return false
         scope.launch { current.readDtcs() }
         return true
+    }
+
+    suspend fun probe(
+        responseHeader: String,
+        service: Int,
+        pid: Int,
+        timeoutMs: Long = DEFAULT_PROBE_TIMEOUT,
+    ): br.com.obdpulse.obd.ProbeResult? {
+        val current = engine ?: return null
+        if (_state.value.status != ObdStatus.CONNECTED) return null
+        return withContext(Dispatchers.IO) { current.probe(responseHeader, service, pid, timeoutMs) }
+    }
+
+    suspend fun refreshUndecoded() {
+        val current = engine ?: return
+        if (_state.value.status != ObdStatus.CONNECTED) return
+        withContext(Dispatchers.IO) { current.readUndecoded() }
+    }
+
+    suspend fun startSession(responseHeader: String, sub: Int): br.com.obdpulse.obd.ProbeResult? {
+        val current = engine ?: return null
+        if (_state.value.status != ObdStatus.CONNECTED) return null
+        return withContext(Dispatchers.IO) { current.startSession(responseHeader, sub) }
+    }
+
+    suspend fun testerPresent(responseHeader: String) {
+        val current = engine ?: return
+        if (_state.value.status != ObdStatus.CONNECTED) return
+        withContext(Dispatchers.IO) { current.testerPresent(responseHeader) }
+    }
+
+    suspend fun setFastScanTiming(fast: Boolean) {
+        val current = engine ?: return
+        if (_state.value.status != ObdStatus.CONNECTED) return
+        withContext(Dispatchers.IO) { current.setFastScanTiming(fast) }
+    }
+
+    fun extendedAddressing(): Boolean = engine?.extendedAddressing ?: false
+
+    suspend fun pingEcu(txId: Int): br.com.obdpulse.obd.EcuPing? {
+        val current = engine ?: return null
+        if (_state.value.status != ObdStatus.CONNECTED) return null
+        return withContext(Dispatchers.IO) { current.pingEcu(txId) }
     }
 
     suspend fun diagnosticsReport(): String {
@@ -124,7 +169,7 @@ object ObdManager {
     private fun describe(error: Throwable): String = when (error) {
         is SecurityException -> "Permissão de Bluetooth não concedida."
         is ObdException -> error.message
-        is ElmTimeoutException -> "O leitor parou de responder."
+        is ElmTimeoutException -> "O adaptador parou de responder."
         is IOException -> error.message ?: "Falha na comunicação Bluetooth."
         else -> error.message
     } ?: "Erro desconhecido."
