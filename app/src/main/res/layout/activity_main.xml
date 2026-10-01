@@ -208,6 +208,14 @@
                 android:layout_marginTop="8dp"
                 android:text="@string/open_pid_explorer" />
 
+            <Button
+                android:id="@+id/open_uconnect"
+                style="@style/Button.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/open_uconnect" />
+
             <TextView
                 android:id="@+id/info"
                 style="@style/BodyText"

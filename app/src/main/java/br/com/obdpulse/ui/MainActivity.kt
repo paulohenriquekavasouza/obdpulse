@@ -105,6 +105,7 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.open_trip).setOnClickListener { startActivity(Intent(this, TripActivity::class.java)) }
         findViewById<Button>(R.id.open_graph).setOnClickListener { startActivity(Intent(this, GraphActivity::class.java)) }
         findViewById<Button>(R.id.open_pid_explorer).setOnClickListener { startActivity(Intent(this, PidExplorerActivity::class.java)) }
+        findViewById<Button>(R.id.open_uconnect).setOnClickListener { startActivity(Intent(this, UconnectActivity::class.java)) }
         setupClusterSpinner()
         ensurePermissions()
         handleSearch(intent)
