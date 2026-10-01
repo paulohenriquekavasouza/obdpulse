@@ -97,6 +97,22 @@ Com esses valores, dá para registrar uma "marca FIAT_BR" e testar login/lock/lo
 4. Guarda-corpos: raio e atraso configuráveis; **só travar (nunca destravar sozinho)**;
    notificação/confirmação antes de travar (ao menos no início); liga/desliga.
 
+## Teste de login (confirmar o Brasil)
+
+`tools/uconnect_login_test.py` tenta logar a sua conta em cada região Fiat conhecida
+(EU, US, Ásia, Canadá — e BR/LATAM se a lib vier a ter) e lista os veículos/VIN de
+quem logar. Rodar no PC do usuário; as credenciais ficam só na máquina dele.
+
+```
+pip install py-uconnect
+python tools/uconnect_login_test.py
+```
+
+Interpretação:
+- Alguma região imprime SUCESSO com o seu VIN → o Pulse é alcançável por aquela região.
+- Todas falham na autenticação → o Brasil usa backend próprio não incluso na lib;
+  seguir para a extração dos endpoints/chaves do app brasileiro.
+
 ## Conclusão
 
 - A função (lock + localização + walk-away) é tecnicamente madura para EU/EUA/Ásia.
