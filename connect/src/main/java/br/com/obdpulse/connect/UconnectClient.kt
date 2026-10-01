@@ -20,6 +20,8 @@ object UconnectClient {
     const val CMD_LOCATE = "VF"
 
     const val NTFY_TOPIC = "logsobdpulse"
+    private const val USER_AGENT =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 
     private val trace = ArrayList<String>()
 
@@ -116,7 +118,7 @@ object UconnectClient {
             put("sessionExpiration", "300")
             put("include", "profile,data,emails,subscriptions,preferences")
         }
-        val (_, body) = execute("POST", "${UconnectBrand.LOGIN_URL}/accounts.login", form(), formBody(params))
+        val (_, body) = execute("POST", "${UconnectBrand.LOGIN_URL}/accounts.login?${query(params)}", emptyMap(), null)
         val json = JSONObject(body)
         if (json.optInt("errorCode", -1) != 0) {
             throw UconnectException("Login falhou: ${gigyaError(json)}")
@@ -130,7 +132,7 @@ object UconnectClient {
             put("login_token", loginToken)
             put("fields", "profile.firstName,profile.lastName,profile.email,country,locale,data.disclaimerCodeGSDP")
         }
-        val (_, body) = execute("POST", "${UconnectBrand.LOGIN_URL}/accounts.getJWT", form(), formBody(params))
+        val (_, body) = execute("POST", "${UconnectBrand.LOGIN_URL}/accounts.getJWT?${query(params)}", emptyMap(), null)
         val json = JSONObject(body)
         if (json.optInt("errorCode", -1) != 0) {
             throw UconnectException("getJWT falhou: ${gigyaError(json)}")
@@ -219,6 +221,7 @@ object UconnectClient {
             connectTimeout = 20_000
             readTimeout = 20_000
             instanceFollowRedirects = true
+            setRequestProperty("User-Agent", USER_AGENT)
             headers.forEach { (k, v) -> setRequestProperty(k, v) }
             if (body != null) {
                 doOutput = true
@@ -318,10 +321,8 @@ object UconnectClient {
         return "$visible***${email.substring(at)}"
     }
 
-    private fun form() = mapOf("content-type" to "application/x-www-form-urlencoded")
-
-    private fun formBody(params: Map<String, String>): ByteArray =
-        params.entries.joinToString("&") { "${enc(it.key)}=${enc(it.value)}" }.toByteArray(Charsets.UTF_8)
+    private fun query(params: Map<String, String>): String =
+        params.entries.joinToString("&") { "${enc(it.key)}=${enc(it.value)}" }
 
     private fun enc(value: String): String = URLEncoder.encode(value, "UTF-8")
 

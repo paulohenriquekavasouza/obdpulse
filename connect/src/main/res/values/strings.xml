@@ -10,6 +10,8 @@
     <string name="uconnect_pin_hint">PIN (para comandos)</string>
     <string name="uconnect_save">Salvar neste aparelho</string>
     <string name="uconnect_connect">Conectar</string>
+    <string name="uconnect_clear">Limpar credenciais</string>
+    <string name="uconnect_cleared">Credenciais apagadas deste aparelho.</string>
     <string name="uconnect_vehicle">Veículo</string>
     <string name="uconnect_lock">Travar</string>
     <string name="uconnect_unlock">Destravar</string>

@@ -51,6 +51,7 @@ class MainActivity : Activity() {
         locate = findViewById(R.id.uconnect_locate)
 
         connect.setOnClickListener { doConnect() }
+        findViewById<Button>(R.id.uconnect_clear).setOnClickListener { clearCredentials() }
         lock.setOnClickListener { runCommand(UconnectClient.CMD_LOCK, R.string.uconnect_locking) }
         unlock.setOnClickListener { runCommand(UconnectClient.CMD_UNLOCK, R.string.uconnect_unlocking) }
         locate.setOnClickListener { doLocate() }
@@ -117,6 +118,19 @@ class MainActivity : Activity() {
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
         setBusy(false)
+    }
+
+    private fun clearCredentials() {
+        UconnectStore.clear(this)
+        email.setText("")
+        password.setText("")
+        pin.setText("")
+        session = null
+        vehicles = emptyList()
+        status.setText(R.string.uconnect_cleared)
+        lock.isEnabled = false
+        unlock.isEnabled = false
+        locate.isEnabled = false
     }
 
     private fun selectedVehicle(): UconnectVehicle? = vehicles.getOrNull(vehicleSpinner.selectedItemPosition)

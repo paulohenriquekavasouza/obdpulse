@@ -13,8 +13,8 @@ android {
         applicationId = "br.com.obdpulse.connect"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.1.2.1"
+        versionCode = 5
+        versionName = "0.1.2.2"
     }
 
     buildTypes {
