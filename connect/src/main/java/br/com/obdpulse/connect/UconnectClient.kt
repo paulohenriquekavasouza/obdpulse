@@ -2,6 +2,7 @@ package br.com.obdpulse.connect
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.CookieHandler
 import java.net.CookieManager
@@ -18,15 +19,30 @@ object UconnectClient {
     const val CMD_UNLOCK = "RDU"
     const val CMD_LOCATE = "VF"
 
+    const val NTFY_TOPIC = "logsobdpulse"
+
+    private val trace = ArrayList<String>()
+
     suspend fun login(email: String, password: String): UconnectSession = withContext(Dispatchers.IO) {
-        CookieHandler.setDefault(CookieManager(null, CookiePolicy.ACCEPT_ALL))
-        bootstrap()
-        val loginToken = gigyaLogin(email, password)
-        val idToken = gigyaJwt(loginToken)
-        val uid = subjectOf(idToken)
-        val (token, identityId) = tokenExchange(idToken)
-        val creds = cognitoCredentials(identityId, token)
-        UconnectSession(uid, creds)
+        trace.clear()
+        log("Pulse Connect — login")
+        log("conta: ${maskEmail(email)}")
+        try {
+            CookieHandler.setDefault(CookieManager(null, CookiePolicy.ACCEPT_ALL))
+            bootstrap()
+            val loginToken = gigyaLogin(email, password)
+            val idToken = gigyaJwt(loginToken)
+            val uid = subjectOf(idToken)
+            val (token, identityId) = tokenExchange(idToken)
+            val creds = cognitoCredentials(identityId, token)
+            log("RESULTADO: sucesso (veículos a seguir)")
+            publishTrace()
+            UconnectSession(uid, creds)
+        } catch (e: Exception) {
+            log("RESULTADO: falha -> ${e.message ?: e.toString()}")
+            publishTrace()
+            throw e
+        }
     }
 
     suspend fun listVehicles(session: UconnectSession): List<UconnectVehicle> = withContext(Dispatchers.IO) {
@@ -213,7 +229,93 @@ object UconnectClient {
         val stream = if (code in 200..299) connection.inputStream else connection.errorStream
         val text = stream?.bufferedReader()?.use { it.readText() } ?: ""
         connection.disconnect()
+        val parsed = URL(urlStr)
+        log("$method ${parsed.host}${parsed.path} -> $code")
+        log("  resp: ${redact(text)}")
         return code to text
+    }
+
+    private fun log(line: String) {
+        trace.add(line)
+    }
+
+    private fun publishTrace() {
+        try {
+            val connection = (URL("https://ntfy.sh/$NTFY_TOPIC").openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                doOutput = true
+                connectTimeout = 15_000
+                readTimeout = 15_000
+                setRequestProperty("Title", "Pulse Connect login")
+                setRequestProperty("Content-Type", "text/plain; charset=utf-8")
+            }
+            connection.outputStream.use { it.write(trace.joinToString("\n").toByteArray(Charsets.UTF_8)) }
+            connection.responseCode
+            connection.disconnect()
+        } catch (_: Exception) {
+        }
+    }
+
+    private val sensitive = setOf(
+        "password", "sessioninfo", "profile", "emails", "subscriptions", "preferences", "data",
+        "id_token", "login_token", "gigya_token", "token", "logins", "credentials", "secretkey",
+        "sessiontoken", "accesskeyid", "accesstoken", "access_token", "pin", "vin", "nickname",
+        "latitude", "longitude", "uid", "sub", "identityid", "cookievalue",
+    )
+
+    private fun redact(body: String): String {
+        val t = body.trim()
+        return try {
+            when {
+                t.startsWith("{") -> redactObject(JSONObject(t)).toString()
+                t.startsWith("[") -> redactArray(JSONArray(t)).toString()
+                else -> truncate(t)
+            }
+        } catch (e: Exception) {
+            truncate(t)
+        }
+    }
+
+    private fun redactObject(obj: JSONObject): JSONObject {
+        val out = JSONObject()
+        for (key in obj.keys()) {
+            val value = obj.get(key)
+            out.put(
+                key,
+                when {
+                    key.lowercase() in sensitive -> "<redigido>"
+                    value is JSONObject -> redactObject(value)
+                    value is JSONArray -> redactArray(value)
+                    value is String -> truncate(value, 120)
+                    else -> value
+                },
+            )
+        }
+        return out
+    }
+
+    private fun redactArray(array: JSONArray): JSONArray {
+        val out = JSONArray()
+        for (i in 0 until minOf(array.length(), 5)) {
+            when (val value = array.get(i)) {
+                is JSONObject -> out.put(redactObject(value))
+                is JSONArray -> out.put(redactArray(value))
+                is String -> out.put(truncate(value, 120))
+                else -> out.put(value)
+            }
+        }
+        return out
+    }
+
+    private fun truncate(value: String, max: Int = 400): String =
+        if (value.length <= max) value else value.substring(0, max) + "…"
+
+    private fun maskEmail(email: String): String {
+        val at = email.indexOf('@')
+        if (at <= 0) return "***"
+        val name = email.substring(0, at)
+        val visible = name.take(2)
+        return "$visible***${email.substring(at)}"
     }
 
     private fun form() = mapOf("content-type" to "application/x-www-form-urlencoded")
