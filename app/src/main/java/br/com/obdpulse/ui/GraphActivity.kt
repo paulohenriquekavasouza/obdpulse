@@ -32,7 +32,7 @@ class GraphActivity : Activity() {
         spinner = findViewById(R.id.graph_metric)
         current = findViewById(R.id.graph_current)
         graph = findViewById(R.id.graph)
-        current.setText(R.string.graph_waiting)
+        current.text = "—"
         buildSpinner(ObdManager.state.value)
     }
 

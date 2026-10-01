@@ -1,6 +1,7 @@
 package br.com.obdpulse.ui
 
 import android.annotation.SuppressLint
+import android.graphics.Typeface
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -87,9 +88,12 @@ class MetricAdapter(
             name.text = Labels.name(key)
             bindValue(live)
             val pinned = key == Keys.CONSUMPTION
+            itemView.setBackgroundResource(if (pinned) R.drawable.row_bg_hero else R.drawable.row_bg)
+            name.setTypeface(null, if (pinned) Typeface.BOLD else Typeface.NORMAL)
             handle.visibility = if (pinned) View.INVISIBLE else View.VISIBLE
             star.visibility = if (pinned) View.INVISIBLE else View.VISIBLE
             star.text = if (favorite) "★" else "☆"
+            star.setTextColor(itemView.context.getColor(if (favorite) R.color.accent else R.color.text_secondary))
             star.setOnClickListener { if (!pinned) onToggleFavorite(key) }
             handle.setOnTouchListener { _, event ->
                 if (!pinned && event.actionMasked == MotionEvent.ACTION_DOWN) onStartDrag(this)

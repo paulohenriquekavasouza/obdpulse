@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">OBD Pulse</string>
+    <string name="app_tagline">Painel OBD-II · Fiat Pulse Abarth</string>
+    <string name="section_connection">Conexão</string>
+    <string name="section_screens">Telas</string>
+    <string name="section_diagnostics">Diagnóstico</string>
+    <string name="section_cluster">Cluster</string>
+    <string name="section_panel">Painel do Android Auto</string>
 
     <string name="connect">Conectar</string>
     <string name="disconnect">Desconectar</string>
@@ -89,6 +95,7 @@
     <string name="trip_eco">Nota de condução</string>
     <string name="trip_fuel_price">Preço do combustível (R$/L)</string>
     <string name="trip_tank">Tanque (L)</string>
+    <string name="trip_settings">Configurações</string>
     <string name="trip_save">Salvar</string>
     <string name="trip_saved">Configurações salvas</string>
 
