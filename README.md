@@ -108,20 +108,6 @@ Limitações: a interface é de player (sem áudio), e o Android Auto trata o OB
 
 Sobre o pop-up "tocando agora" no cluster: o painel do carro mostra um aviso sempre que o título dos metadados de mídia muda. Nesta branch, os metadados ficam fixos ("OBD Pulse" e o status da conexão) e só mudam ao conectar ou desconectar, então o pop-up deixa de aparecer a cada leitura. Em troca, a linha "tocando agora" não mostra mais os valores ao vivo nem o valor em destaque ao tocar num item; os valores ao vivo continuam nas abas Painel e Todos, que atualizam sem gerar o pop-up. Não há como manter os valores ao vivo no "tocando agora" sem reativar o pop-up, porque ele é uma reação do próprio cluster à troca de metadados.
 
-### Interface de painel (Google Play)
-
-O Android Auto só lista apps feitos com a Car App Library quando eles são instalados por uma fonte confiável do Google Play. A opção "Fontes desconhecidas" **não vale** para esse tipo de app. Se o app for instalado pelo Google Play, as duas interfaces aparecem no carro.
-
-O caminho sem publicar o app é o **Internal App Sharing** do Google Play: sem revisão, com build assinada por qualquer chave e link válido por 60 dias.
-
-1. Crie uma conta no [Google Play Console](https://play.google.com/console) (taxa única de US$ 25 e verificação de identidade).
-2. No Play Console, crie o app **OBD Pulse**. Não é preciso publicar.
-3. Em **Testar e lançar → Configuração → Compartilhamento interno de apps**, adicione o seu e-mail como quem envia e quem baixa.
-4. Na página de envio do compartilhamento interno, envie `app-release.apk` (gerado por `./gradlew assembleRelease`) e copie o link.
-5. No celular, abra a **Play Store → Configurações → Sobre** e toque 7 vezes na versão da Play Store. Depois, em Configurações, ative **Compartilhamento interno de apps**.
-6. Desinstale o OBD Pulse instalado por APK (a assinatura é diferente) e abra o link no celular para instalar pela Play Store.
-7. Conecte o celular ao carro: o **OBD Pulse** aparece na lista de apps. Se não aparecer, desconecte e conecte de novo.
-
 A partir de 30/09/2026, o Android passa a exigir, no Brasil, desenvolvedor verificado para instalar APKs fora das lojas. Para um APK de desenvolvedor não registrado, é preciso usar o `adb` ou o fluxo avançado do sistema. A instalação pelo Google Play não é afetada.
 
 Na tela de painel:
@@ -134,6 +120,5 @@ O app usa a categoria IoT do Android Auto. Em hosts com Car API 7 ou superior o 
 
 ## Limitações
 
-- Adaptadores "ELM327 v2.1" são clones, porque essa versão nunca foi lançada oficialmente. Podem ser lentos (poucas leituras por segundo) ou instáveis. Se a conexão cair com frequência, um leitor de melhor qualidade resolve.
 - O Bluetooth do celular fica dividido entre o leitor e o Android Auto sem fio. Em alguns aparelhos isso pode deixar a conexão instável.
 - A versão *release* é assinada com a chave de debug. Isso basta para instalação pessoal e para o compartilhamento interno do Google Play, que reassina o app. Para publicar numa faixa de teste ou em produção, é preciso uma chave de upload própria.
