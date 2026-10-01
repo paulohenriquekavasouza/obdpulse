@@ -63,23 +63,7 @@
     <string name="notification_connected">Lendo dados do veículo</string>
     <string name="notification_connected_mil">Lendo dados · luz de falha acesa</string>
 
-    <string name="car_status">Status</string>
-    <string name="car_dtc">Falhas</string>
-    <string name="car_disconnected">Desconectado · toque para conectar</string>
-    <string name="car_connecting">Conectando ao leitor…</string>
-    <string name="car_initializing">Comunicando com o veículo…</string>
-    <string name="car_connected">Conectado · toque para desconectar</string>
-    <string name="car_error">%1$s · toque para tentar novamente</string>
-    <string name="car_mil">Luz de falha acesa (%1$d)</string>
     <string name="car_select_device">Escolha o leitor no app do celular primeiro</string>
-
-    <string name="dtc_title">Códigos de falha</string>
-    <string name="dtc_not_connected">Conecte ao veículo para ler as falhas</string>
-    <string name="dtc_none">Nenhuma falha registrada</string>
-    <string name="dtc_row">%1$s · central %2$s</string>
-    <string name="dtc_stored_one">Armazenada</string>
-    <string name="dtc_pending_one">Pendente</string>
-    <string name="dtc_permanent_one">Permanente</string>
 
     <string name="auto_connect">Conectar automaticamente</string>
     <string name="open_records">Recordes</string>

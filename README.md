@@ -29,8 +29,8 @@ Detalhes de leitura:
 
 ## Por que Kotlin nativo
 
-- O Android Auto só aceita apps feitos com a **Car App Library**, que é nativa. Flutter ou React Native precisariam dessa mesma camada nativa por baixo.
-- Sem Compose e sem AppCompat: a interface do celular usa Views do próprio Android, e as dependências se resumem a Car App Library, lifecycle e coroutines. APK pequeno e inicialização rápida.
+- No Android Auto o app aparece pela **interface de mídia** (MediaBrowserService), que é nativa do Android. Flutter ou React Native precisariam dessa mesma camada nativa por baixo.
+- Sem Compose e sem AppCompat: a interface do celular usa Views do próprio Android, e as dependências se resumem a RecyclerView, lifecycle e coroutines. APK pequeno e inicialização rápida.
 
 ## Estrutura
 
@@ -40,12 +40,11 @@ app/src/main/java/br/com/obdpulse/
 ├── bt/         conexão Bluetooth SPP com o leitor
 ├── service/    serviço em primeiro plano que mantém a conexão ativa
 ├── ui/         tela do celular
-├── car/        telas do Android Auto (Car App Library)
 ├── media/      interface de mídia do Android Auto (MediaBrowserService)
 ├── ObdManager.kt
 └── Prefs.kt
 app/src/test/   testes do protocolo (simulador de ELM327 com duas centrais, motor e câmbio)
-                e das telas e da interface de mídia do Android Auto (Robolectric)
+                e da interface de mídia do Android Auto (Robolectric)
 ```
 
 ## Como compilar
@@ -56,10 +55,10 @@ Requisitos: Android Studio recente (ou JDK 17+ com Android SDK 36).
 - **Linha de comando:**
   ```
   ./gradlew assembleDebug      # gera app/build/outputs/apk/debug/app-debug.apk
-  ./gradlew test               # roda os testes do protocolo e das telas do Android Auto
+  ./gradlew test               # roda os testes do protocolo e da interface de mídia
   ```
 
-Versões: AGP 8.13.2, Kotlin 2.2.21, Car App Library 1.7.0, Gradle 8.14.5, compileSdk/targetSdk 36 e minSdk 26.
+Versões: AGP 8.13.2, Kotlin 2.2.21, Gradle 8.14.5, compileSdk/targetSdk 36 e minSdk 26.
 
 ## Primeiro uso
 
@@ -77,13 +76,7 @@ Três telas adicionais no celular:
 
 ## Android Auto
 
-O app tem duas interfaces para o carro:
-
-| Interface | Como instalar | Aparência |
-|---|---|---|
-| **Mídia** | APK + "Fontes desconhecidas" no Android Auto | Como um player: abas Painel, Todos e Falhas, e os valores em destaque na tela "tocando agora" |
-
-### Interface de mídia (APK)
+No carro o app aparece como um **app de mídia** (player): um navegador com as abas Painel, Desempenho, Turbo e Falhas, e os valores em destaque na tela "tocando agora". Essa é a única interface — não há a tela de painel da Car App Library, porque a intenção é rodar o app instalado direto por APK, sem publicar no Google Play.
 
 A opção "Fontes desconhecidas" do Android Auto vale para apps de mídia, então esta interface funciona com o APK:
 
@@ -107,17 +100,9 @@ Limitações: a interface é de player (sem áudio), e o Android Auto trata o OB
 
 Sobre o pop-up "tocando agora" no cluster: o painel do carro mostra um aviso sempre que o título dos metadados de mídia muda. Nesta branch, os metadados ficam fixos ("OBD Pulse" e o status da conexão) e só mudam ao conectar ou desconectar, então o pop-up deixa de aparecer a cada leitura. Em troca, a linha "tocando agora" não mostra mais os valores ao vivo nem o valor em destaque ao tocar num item; os valores ao vivo continuam nas abas Painel e Todos, que atualizam sem gerar o pop-up. Não há como manter os valores ao vivo no "tocando agora" sem reativar o pop-up, porque ele é uma reação do próprio cluster à troca de metadados.
 
-A partir de 30/09/2026, o Android passa a exigir, no Brasil, desenvolvedor verificado para instalar APKs fora das lojas. Para um APK de desenvolvedor não registrado, é preciso usar o `adb` ou o fluxo avançado do sistema. A instalação pelo Google Play não é afetada.
-
-Na tela de painel:
-- A primeira linha mostra o status. Toque nela para conectar ou desconectar, usando o leitor escolhido no celular.
-- As linhas seguintes mostram os parâmetros marcados com ★, na ordem em que foram marcados.
-- O botão **Falhas** lê e lista os códigos de falha.
-- A tela atualiza no máximo uma vez por segundo, e o número de linhas é limitado pelo Android Auto (normalmente 6).
-
-O app usa a categoria IoT do Android Auto. Em hosts com Car API 7 ou superior o cabeçalho usa o componente `Header`; em hosts mais antigos, o formato anterior.
+A partir de 30/09/2026, o Android passa a exigir, no Brasil, desenvolvedor verificado para instalar APKs fora das lojas. Para um APK de desenvolvedor não registrado, é preciso usar o `adb` ou o fluxo avançado do sistema.
 
 ## Limitações
 
 - O Bluetooth do celular fica dividido entre o leitor e o Android Auto sem fio. Em alguns aparelhos isso pode deixar a conexão instável.
-- A versão *release* é assinada com a chave de debug. Isso basta para instalação pessoal e para o compartilhamento interno do Google Play, que reassina o app. Para publicar numa faixa de teste ou em produção, é preciso uma chave de upload própria.
+- A versão *release* é assinada com a chave de debug, o que basta para instalação pessoal via APK. O app não é feito para publicação no Google Play.
