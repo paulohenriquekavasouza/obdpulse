@@ -128,10 +128,21 @@ object UconnectClient {
         val (code, resp) = execute("POST", UconnectBrand.TOKEN_URL, headers, body)
         if (code !in 200..299) throw UconnectException("Troca de token falhou ($code): $resp")
         val json = JSONObject(resp)
-        val token = json.optString("token")
-        val identityId = json.optString("IdentityId")
-        if (token.isBlank() || identityId.isBlank()) throw UconnectException("Troca de token incompleta.")
+        val token = firstNonBlank(json, "token", "Token", "accessToken", "access_token")
+        val identityId = firstNonBlank(json, "IdentityId", "identityId", "identity_id")
+        if (token.isBlank() || identityId.isBlank()) {
+            val keys = json.keys().asSequence().toList().joinToString(",")
+            throw UconnectException("Troca de token incompleta. Campos recebidos: [$keys]")
+        }
         return token to identityId
+    }
+
+    private fun firstNonBlank(json: JSONObject, vararg names: String): String {
+        for (name in names) {
+            val value = json.optString(name)
+            if (value.isNotBlank()) return value
+        }
+        return ""
     }
 
     private fun cognitoCredentials(identityId: String, token: String): AwsCreds {
