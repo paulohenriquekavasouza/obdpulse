@@ -82,7 +82,6 @@ O app tem duas interfaces para o carro:
 | Interface | Como instalar | Aparência |
 |---|---|---|
 | **Mídia** | APK + "Fontes desconhecidas" no Android Auto | Como um player: abas Painel, Todos e Falhas, e os valores em destaque na tela "tocando agora" |
-| **Painel (Car App Library)** | Somente pelo Google Play (Internal App Sharing) | Lista própria com status, favoritos e botão Falhas |
 
 ### Interface de mídia (APK)
 
