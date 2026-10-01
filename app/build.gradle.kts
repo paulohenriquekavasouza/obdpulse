@@ -13,8 +13,8 @@ android {
         applicationId = "br.com.obdpulse"
         minSdk = 26
         targetSdk = 36
-        versionCode = 16
-        versionName = "2.5"
+        versionCode = 17
+        versionName = "2.6"
     }
 
     buildTypes {

@@ -13,9 +13,10 @@ import android.os.Build
 import android.os.Bundle
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.content.res.ColorStateList
 import android.widget.Button
-import android.widget.CheckBox
 import android.widget.Spinner
+import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -94,7 +95,7 @@ class MainActivity : Activity() {
         readDtc.setOnClickListener { ObdManager.requestDtcs() }
         copyDiagnostics.setOnClickListener { copyDiagnostics() }
         findViewById<Button>(R.id.refresh).setOnClickListener { loadDevices() }
-        val autoConnect = findViewById<CheckBox>(R.id.auto_connect)
+        val autoConnect = findViewById<Switch>(R.id.auto_connect)
         autoConnect.isChecked = Prefs.autoConnect(this)
         autoConnect.setOnCheckedChangeListener { _, checked ->
             Prefs.setAutoConnect(this, checked)
@@ -249,21 +250,31 @@ class MainActivity : Activity() {
 
     private fun render(state: ObdState) {
         lastState = state
-        status.update(
-            when (state.status) {
-                ObdStatus.DISCONNECTED -> getString(R.string.status_disconnected)
-                ObdStatus.CONNECTING -> getString(R.string.status_connecting)
-                ObdStatus.INITIALIZING -> getString(R.string.status_initializing)
-                ObdStatus.CONNECTED -> getString(R.string.status_connected)
-                ObdStatus.ERROR -> getString(R.string.status_error, state.message.orEmpty())
-            },
-        )
+        renderStatus(state)
         connect.update(getString(if (state.isActive) R.string.disconnect else R.string.connect))
         devices.isEnabled = !state.isActive
         readDtc.isEnabled = state.status == ObdStatus.CONNECTED && !state.dtcLoading
-        info.update(infoText(state))
-        dtc.update(dtcText(state))
+        val infoValue = infoText(state)
+        info.update(infoValue)
+        info.visibility = if (infoValue.isBlank()) android.view.View.GONE else android.view.View.VISIBLE
+        val dtcValue = dtcText(state)
+        dtc.update(dtcValue)
+        dtc.visibility = if (dtcValue.isBlank()) android.view.View.GONE else android.view.View.VISIBLE
         submitMetrics(state)
+    }
+
+    private fun renderStatus(state: ObdState) {
+        val (label, colorRes) = when (state.status) {
+            ObdStatus.DISCONNECTED -> getString(R.string.status_disconnected) to R.color.text_secondary
+            ObdStatus.CONNECTING -> getString(R.string.status_connecting) to R.color.amber
+            ObdStatus.INITIALIZING -> getString(R.string.status_initializing) to R.color.amber
+            ObdStatus.CONNECTED -> getString(R.string.status_connected) to R.color.positive
+            ObdStatus.ERROR -> getString(R.string.status_error, state.message.orEmpty()) to R.color.accent
+        }
+        status.update(label)
+        val color = getColor(colorRes)
+        status.setTextColor(color)
+        status.backgroundTintList = ColorStateList.valueOf((color and 0x00FFFFFF) or 0x33000000)
     }
 
     private fun submitMetrics(state: ObdState) {
