@@ -13,6 +13,23 @@
     <string name="uconnect_clear">Limpar credenciais</string>
     <string name="uconnect_cleared">Credenciais apagadas deste aparelho.</string>
     <string name="actions_title">Pulse Connect</string>
+    <string name="actions_status">Status</string>
+    <string name="actions_json">JSON da API</string>
+    <string name="refresh">Atualizar</string>
+
+    <string name="status_title">Status do veículo</string>
+    <string name="status_loading">Carregando…</string>
+    <string name="status_updated">Atualizado.</string>
+    <string name="status_partial">Atualizado, mas alguns dados não carregaram: %1$s</string>
+    <string name="status_section_vehicle">Veículo</string>
+    <string name="status_section_panel">Painel</string>
+    <string name="status_section_tires">Pneus</string>
+    <string name="status_section_doors">Portas e janelas</string>
+    <string name="status_section_location">Localização e horários</string>
+
+    <string name="json_title">JSON da API</string>
+    <string name="json_copy">Copiar JSON</string>
+    <string name="json_copied">JSON copiado</string>
     <string name="actions_map">Mapa</string>
     <string name="actions_loading">Carregando veículos…</string>
     <string name="uconnect_logout">Sair</string>

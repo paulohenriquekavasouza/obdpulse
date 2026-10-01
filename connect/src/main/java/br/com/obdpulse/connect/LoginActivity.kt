@@ -64,9 +64,10 @@ class LoginActivity : Activity() {
         scope.launch {
             try {
                 val session = UconnectClient.login(user, pass)
-                SessionHolder.session = session
-                SessionHolder.pin = pin.text.toString().ifBlank { UconnectStore.pin(this@LoginActivity) }
-                startActivity(Intent(this@LoginActivity, ActionsActivity::class.java))
+                SessionHolder.onLogin(session, pin.text.toString().ifBlank { UconnectStore.pin(this@LoginActivity) })
+                val target = SessionHolder.returnTo ?: ActionsActivity::class.java
+                SessionHolder.returnTo = null
+                startActivity(Intent(this@LoginActivity, target))
                 finish()
             } catch (e: Exception) {
                 status.text = getString(R.string.uconnect_status_error, e.message.orEmpty())

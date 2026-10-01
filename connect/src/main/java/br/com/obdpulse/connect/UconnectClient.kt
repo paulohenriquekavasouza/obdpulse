@@ -20,6 +20,7 @@ object UconnectClient {
     const val CMD_LOCATE = "VF"
 
     const val NTFY_TOPIC = "logsobdpulse"
+    private const val MAX_TRACE_LINES = 200
     private const val USER_AGENT =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 
@@ -48,10 +49,8 @@ object UconnectClient {
     }
 
     suspend fun listVehicles(session: UconnectSession): List<UconnectVehicle> = withContext(Dispatchers.IO) {
-        val url = "${UconnectBrand.API_URL}/v4/accounts/${session.uid}/vehicles?stage=ALL&sdp=ALL"
-        val (code, body) = signed("GET", url, UconnectBrand.API_KEY, ByteArray(0), session)
-        if (code !in 200..299) throw UconnectException("Falha ao listar veículos ($code): $body")
-        val array = JSONObject(body).optJSONArray("vehicles") ?: return@withContext emptyList()
+        val json = getJson(session, vehiclesUrl(session), "Listar veículos")
+        val array = json.optJSONArray("vehicles") ?: return@withContext emptyList()
         (0 until array.length()).map { i ->
             val v = array.getJSONObject(i)
             val make = v.optString("make")
@@ -66,10 +65,7 @@ object UconnectClient {
     }
 
     suspend fun location(session: UconnectSession, vin: String): VehicleLocation? = withContext(Dispatchers.IO) {
-        val url = "${UconnectBrand.API_URL}/v1/accounts/${session.uid}/vehicles/$vin/location/lastknown"
-        val (code, body) = signed("GET", url, UconnectBrand.API_KEY, ByteArray(0), session)
-        if (code !in 200..299) throw UconnectException("Falha ao obter localização ($code): $body")
-        val json = JSONObject(body)
+        val json = getJson(session, locationUrl(session, vin), "Obter localização")
         if (!json.has("latitude") || !json.has("longitude")) return@withContext null
         VehicleLocation(
             latitude = json.getDouble("latitude"),
@@ -78,12 +74,43 @@ object UconnectClient {
         )
     }
 
+    suspend fun fetchVehicleData(session: UconnectSession, vin: String?): VehicleData = withContext(Dispatchers.IO) {
+        val errors = LinkedHashMap<String, String>()
+        val list = guarded(errors, "vehicles") { getJson(session, vehiclesUrl(session), "Listar veículos") }
+        val entry = pickVehicle(list, vin)
+        val resolvedVin = entry?.optString("vin")?.takeIf { it.isNotBlank() } ?: vin
+        if (resolvedVin == null) {
+            return@withContext VehicleData(entry, null, null, null, errors)
+        }
+        val base = UconnectBrand.API_URL
+        val uid = session.uid
+        val status = guarded(errors, "status") {
+            try {
+                getJson(session, "$base/v4/accounts/$uid/vehicles/$resolvedVin/status/", "Status v4")
+            } catch (e: UconnectAuthException) {
+                throw e
+            } catch (e: UconnectException) {
+                getJson(session, "$base/v3/accounts/$uid/vehicles/$resolvedVin/status/", "Status v3")
+            }
+        }
+        val remote = guarded(errors, "remote_status") {
+            getJson(session, "$base/v1/accounts/$uid/vehicles/$resolvedVin/remote/status", "Status remoto")
+        }
+        val location = guarded(errors, "location") {
+            getJson(session, locationUrl(session, resolvedVin), "Localização")
+        }
+        VehicleData(entry, status, remote, location, errors)
+    }
+
     suspend fun authenticatePin(session: UconnectSession, pin: String): String = withContext(Dispatchers.IO) {
         val url = "${UconnectBrand.AUTH_URL}/v1/accounts/${session.uid}/ignite/pin/authenticate"
         val encoded = Base64.getEncoder().encodeToString(pin.toByteArray(Charsets.UTF_8))
         val body = JSONObject().put("pin", encoded).toString().toByteArray(Charsets.UTF_8)
         val (code, resp) = signed("POST", url, UconnectBrand.AUTH_KEY, body, session)
-        if (code !in 200..299) throw UconnectException("PIN recusado ($code): $resp")
+        if (code == 401 || (code == 403 && looksLikeExpiredCredentials(resp))) {
+            throw UconnectAuthException("PIN: acesso negado ($code) ${snippet(resp)}")
+        }
+        if (code !in 200..299) throw UconnectException("PIN recusado ($code): ${snippet(resp)}")
         JSONObject(resp).optString("token").ifBlank { throw UconnectException("PIN sem token na resposta.") }
     }
 
@@ -93,8 +120,62 @@ object UconnectClient {
             val url = "${UconnectBrand.API_URL}/v1/accounts/${session.uid}/vehicles/$vin/$path"
             val body = JSONObject().put("command", name).put("pinAuth", pinAuth).toString().toByteArray(Charsets.UTF_8)
             val (code, resp) = signed("POST", url, UconnectBrand.API_KEY, body, session)
-            if (code !in 200..299) throw UconnectException("Comando $name falhou ($code): $resp")
+            ensureOk(code, resp, "Comando $name")
         }
+
+    private fun vehiclesUrl(session: UconnectSession): String =
+        "${UconnectBrand.API_URL}/v4/accounts/${session.uid}/vehicles?stage=ALL&sdp=ALL"
+
+    private fun locationUrl(session: UconnectSession, vin: String): String =
+        "${UconnectBrand.API_URL}/v1/accounts/${session.uid}/vehicles/$vin/location/lastknown"
+
+    private fun pickVehicle(list: JSONObject?, vin: String?): JSONObject? {
+        val array = list?.optJSONArray("vehicles") ?: return null
+        var first: JSONObject? = null
+        for (i in 0 until array.length()) {
+            val item = array.optJSONObject(i) ?: continue
+            if (first == null) first = item
+            if (vin != null && item.optString("vin") == vin) return item
+        }
+        return first
+    }
+
+    private fun <T> guarded(errors: MutableMap<String, String>, key: String, block: () -> T): T? =
+        try {
+            block()
+        } catch (e: UconnectAuthException) {
+            throw e
+        } catch (e: Exception) {
+            errors[key] = e.message ?: e.toString()
+            null
+        }
+
+    private fun getJson(session: UconnectSession, url: String, what: String): JSONObject {
+        val (code, body) = signed("GET", url, UconnectBrand.API_KEY, ByteArray(0), session)
+        ensureOk(code, body, what)
+        return parseObject(body)
+    }
+
+    private fun parseObject(body: String): JSONObject {
+        val text = body.trim()
+        return try {
+            if (text.startsWith("[")) JSONObject().put("items", JSONArray(text)) else JSONObject(text)
+        } catch (e: Exception) {
+            JSONObject().put("raw", truncate(text, 400))
+        }
+    }
+
+    private fun ensureOk(code: Int, body: String, what: String) {
+        if (code == 401 || code == 403) throw UconnectAuthException("$what: acesso negado ($code) ${snippet(body)}")
+        if (code !in 200..299) throw UconnectException("$what falhou ($code): ${snippet(body)}")
+    }
+
+    private fun looksLikeExpiredCredentials(body: String): Boolean {
+        val text = body.lowercase()
+        return "expired" in text || "security token" in text || "signature" in text
+    }
+
+    private fun snippet(body: String): String = truncate(body.trim(), 200)
 
     private fun bootstrap() {
         val url = "${UconnectBrand.LOGIN_URL}/accounts.webSdkBootstrap?apiKey=${enc(UconnectBrand.LOGIN_API_KEY)}"
@@ -239,7 +320,9 @@ object UconnectClient {
     }
 
     private fun log(line: String) {
-        trace.add(line)
+        synchronized(trace) {
+            if (trace.size < MAX_TRACE_LINES) trace.add(line)
+        }
     }
 
     private fun publishTrace() {

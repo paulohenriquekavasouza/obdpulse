@@ -12,6 +12,7 @@ import android.widget.Button
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -26,7 +27,6 @@ class ActionsActivity : Activity() {
     private lateinit var lock: Button
     private lateinit var unlock: Button
     private lateinit var locate: Button
-    private lateinit var logout: Button
     private lateinit var map: WebView
 
     private var vehicles: List<UconnectVehicle> = emptyList()
@@ -35,7 +35,7 @@ class ActionsActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (SessionHolder.session == null) {
-            backToLogin()
+            AuthFlow.relogin(this, SessionHolder.pending)
             return
         }
         setContentView(R.layout.activity_actions)
@@ -44,21 +44,24 @@ class ActionsActivity : Activity() {
         lock = findViewById(R.id.uconnect_lock)
         unlock = findViewById(R.id.uconnect_unlock)
         locate = findViewById(R.id.uconnect_locate)
-        logout = findViewById(R.id.uconnect_logout)
         map = findViewById(R.id.map)
         map.settings.javaScriptEnabled = true
 
-        lock.setOnClickListener { runCommand(UconnectClient.CMD_LOCK, R.string.uconnect_locking) }
-        unlock.setOnClickListener { runCommand(UconnectClient.CMD_UNLOCK, R.string.uconnect_unlocking) }
-        locate.setOnClickListener { doLocate() }
-        logout.setOnClickListener {
-            UconnectStore.clear(this)
-            SessionHolder.clear()
-            backToLogin()
+        lock.setOnClickListener { selectedVehicle()?.let { performCommand(UconnectClient.CMD_LOCK, it.vin) } }
+        unlock.setOnClickListener { selectedVehicle()?.let { performCommand(UconnectClient.CMD_UNLOCK, it.vin) } }
+        locate.setOnClickListener { selectedVehicle()?.let { performLocate(it.vin) } }
+        findViewById<Button>(R.id.actions_status).setOnClickListener {
+            startActivity(Intent(this, StatusActivity::class.java))
         }
+        findViewById<Button>(R.id.actions_json).setOnClickListener {
+            startActivity(Intent(this, JsonActivity::class.java))
+        }
+        findViewById<Button>(R.id.uconnect_logout).setOnClickListener { logout() }
 
         setCommandsEnabled(false)
-        loadVehicles()
+        val pending = SessionHolder.pending
+        SessionHolder.pending = null
+        loadVehicles(pending)
     }
 
     override fun onDestroy() {
@@ -66,8 +69,8 @@ class ActionsActivity : Activity() {
         super.onDestroy()
     }
 
-    private fun loadVehicles() {
-        val session = SessionHolder.session ?: return backToLogin()
+    private fun loadVehicles(pending: PendingAction?) {
+        val session = SessionHolder.session ?: return
         info.setText(R.string.actions_loading)
         scope.launch {
             try {
@@ -77,71 +80,95 @@ class ActionsActivity : Activity() {
                     info.setText(R.string.uconnect_status_no_vehicles)
                     return@launch
                 }
-                vehicleSpinner.adapter = ArrayAdapter(
-                    this@ActionsActivity,
-                    android.R.layout.simple_spinner_dropdown_item,
-                    list.map { it.label },
-                )
-                val savedVin = UconnectStore.vin(this@ActionsActivity)
-                vehicleSpinner.setSelection(list.indexOfFirst { it.vin == savedVin }.takeIf { it >= 0 } ?: 0)
-                vehicleSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                        selectedVehicle()?.let {
-                            UconnectStore.saveVin(this@ActionsActivity, it.vin)
-                            info.text = it.label
-                            loadLocation(it)
-                        }
-                    }
-
-                    override fun onNothingSelected(parent: AdapterView<*>?) = Unit
-                }
+                populateVehicles(list)
                 setCommandsEnabled(true)
+                pending?.let { resume(it) }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                onError(e)
+                handleError(e, pending)
             }
+        }
+    }
+
+    private fun populateVehicles(list: List<UconnectVehicle>) {
+        vehicleSpinner.adapter = ArrayAdapter(
+            this, android.R.layout.simple_spinner_dropdown_item, list.map { it.label },
+        )
+        val savedVin = UconnectStore.vin(this)
+        vehicleSpinner.setSelection(list.indexOfFirst { it.vin == savedVin }.takeIf { it >= 0 } ?: 0)
+        vehicleSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                selectedVehicle()?.let {
+                    UconnectStore.saveVin(this@ActionsActivity, it.vin)
+                    info.text = it.label
+                    loadLocation(it)
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
     }
 
     private fun selectedVehicle(): UconnectVehicle? = vehicles.getOrNull(vehicleSpinner.selectedItemPosition)
 
+    private fun resume(pending: PendingAction) {
+        val vin = pending.vin ?: selectedVehicle()?.vin ?: return
+        when (pending.type) {
+            PendingAction.Type.COMMAND -> pending.command?.let { performCommand(it, vin) }
+            PendingAction.Type.LOCATE -> performLocate(vin)
+        }
+    }
+
     private fun loadLocation(vehicle: UconnectVehicle) {
         val session = SessionHolder.session ?: return
         scope.launch {
             try {
-                val location = UconnectClient.location(session, vehicle.vin)
-                showLocation(vehicle, location)
+                showLocation(vehicle.label, UconnectClient.location(session, vehicle.vin))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                onError(e)
+                handleError(e, null)
             }
         }
     }
 
-    private fun runCommand(name: String, busyLabel: Int) {
-        val session = SessionHolder.session ?: return backToLogin()
-        val vehicle = selectedVehicle() ?: return
+    private fun performCommand(name: String, vin: String) {
+        val pending = PendingAction(PendingAction.Type.COMMAND, vin, name)
+        val session = SessionHolder.session
+        if (session == null) {
+            AuthFlow.relogin(this, pending)
+            return
+        }
         val pinValue = SessionHolder.pin.orEmpty()
         if (pinValue.isEmpty()) {
             Toast.makeText(this, R.string.uconnect_need_pin, Toast.LENGTH_SHORT).show()
             return
         }
         setCommandsEnabled(false)
-        info.setText(busyLabel)
+        info.setText(if (name == UconnectClient.CMD_LOCK) R.string.uconnect_locking else R.string.uconnect_unlocking)
         scope.launch {
             try {
                 val pinAuth = UconnectClient.authenticatePin(session, pinValue)
-                UconnectClient.command(session, vehicle.vin, name, pinAuth)
+                UconnectClient.command(session, vin, name, pinAuth)
                 info.setText(R.string.uconnect_command_sent)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                onError(e)
+                handleError(e, pending)
             } finally {
                 setCommandsEnabled(true)
             }
         }
     }
 
-    private fun doLocate() {
-        val session = SessionHolder.session ?: return backToLogin()
-        val vehicle = selectedVehicle() ?: return
+    private fun performLocate(vin: String) {
+        val pending = PendingAction(PendingAction.Type.LOCATE, vin, null)
+        val session = SessionHolder.session
+        if (session == null) {
+            AuthFlow.relogin(this, pending)
+            return
+        }
         val pinValue = SessionHolder.pin.orEmpty()
         setCommandsEnabled(false)
         info.setText(R.string.uconnect_locating)
@@ -149,25 +176,28 @@ class ActionsActivity : Activity() {
             try {
                 if (pinValue.isNotEmpty()) {
                     val pinAuth = UconnectClient.authenticatePin(session, pinValue)
-                    UconnectClient.command(session, vehicle.vin, UconnectClient.CMD_LOCATE, pinAuth)
+                    UconnectClient.command(session, vin, UconnectClient.CMD_LOCATE, pinAuth)
                 }
-                showLocation(vehicle, UconnectClient.location(session, vehicle.vin))
+                val label = vehicles.firstOrNull { it.vin == vin }?.label ?: vin
+                showLocation(label, UconnectClient.location(session, vin))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                onError(e)
+                handleError(e, pending)
             } finally {
                 setCommandsEnabled(true)
             }
         }
     }
 
-    private fun showLocation(vehicle: UconnectVehicle, location: VehicleLocation?) {
+    private fun showLocation(label: String, location: VehicleLocation?) {
         if (location == null) {
-            info.text = vehicle.label
+            info.text = label
             return
         }
         info.text = getString(
             R.string.uconnect_location,
-            vehicle.label,
+            label,
             String.format(Locale.US, "%.5f", location.latitude),
             String.format(Locale.US, "%.5f", location.longitude),
         )
@@ -192,23 +222,14 @@ class ActionsActivity : Activity() {
         """.trimIndent()
     }
 
-    private fun onError(e: Exception) {
-        val message = e.message.orEmpty()
-        if (looksExpired(message)) {
-            SessionHolder.session = null
-            Toast.makeText(this, R.string.uconnect_session_expired, Toast.LENGTH_SHORT).show()
-            backToLogin()
-        } else {
-            info.text = getString(R.string.uconnect_status_error, message)
-        }
+    private fun handleError(error: Exception, pending: PendingAction?) {
+        if (AuthFlow.handle(this, error, pending)) return
+        info.text = getString(R.string.uconnect_status_error, error.message.orEmpty())
     }
 
-    private fun looksExpired(message: String): Boolean {
-        val m = message.lowercase()
-        return "403" in m || "forbidden" in m || "expired" in m || "security token" in m || "credential" in m
-    }
-
-    private fun backToLogin() {
+    private fun logout() {
+        UconnectStore.clear(this)
+        SessionHolder.clear()
         startActivity(Intent(this, LoginActivity::class.java))
         finish()
     }

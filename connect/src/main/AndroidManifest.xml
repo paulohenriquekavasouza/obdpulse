@@ -22,5 +22,13 @@
         <activity
             android:name=".ActionsActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".StatusActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".JsonActivity"
+            android:exported="false" />
     </application>
 </manifest>

@@ -75,6 +75,31 @@
         android:layout_marginTop="8dp"
         android:text="@string/uconnect_locate" />
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:baselineAligned="false"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/actions_status"
+            style="@style/Button.Secondary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/actions_status" />
+
+        <Button
+            android:id="@+id/actions_json"
+            style="@style/Button.Secondary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:text="@string/actions_json" />
+    </LinearLayout>
+
     <TextView
         style="@style/SectionLabel"
         android:layout_width="wrap_content"

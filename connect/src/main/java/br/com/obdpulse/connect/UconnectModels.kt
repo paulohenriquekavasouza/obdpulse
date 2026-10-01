@@ -1,5 +1,7 @@
 package br.com.obdpulse.connect
 
+import org.json.JSONObject
+
 data class UconnectVehicle(
     val vin: String,
     val label: String,
@@ -23,4 +25,22 @@ data class UconnectSession(
     val creds: AwsCreds,
 )
 
-class UconnectException(message: String) : Exception(message)
+open class UconnectException(message: String) : Exception(message)
+
+class UconnectAuthException(message: String) : UconnectException(message)
+
+data class VehicleData(
+    val vehicle: JSONObject?,
+    val status: JSONObject?,
+    val remoteStatus: JSONObject?,
+    val location: JSONObject?,
+    val errors: Map<String, String>,
+)
+
+class PendingAction(
+    val type: Type,
+    val vin: String?,
+    val command: String?,
+) {
+    enum class Type { COMMAND, LOCATE }
+}
