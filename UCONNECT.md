@@ -76,9 +76,17 @@ Opcional: registrar `FIAT_BR` = cópia de `FIAT_US` trocando só o `locale` para
 (cosmético; país/idioma vêm da conta). Os demais campos (`token_url`, `api`, `auth`,
 `region`, `brand_code="ALL"`) são os mesmos do `FIAT_US`.
 
-Segurança: `login_token`, `gigya_token` (JWT) e o `uid` são efêmeros/pessoais e **não
-ficam no repositório**. A APIKey do Gigya é chave pública de cliente (já consta na
-própria py-uconnect como `login_api_key` do `FIAT_US`).
+Segurança: `login_token`, `gigya_token` (JWT), `uid`, VIN e coordenadas são
+efêmeros/pessoais e **não ficam no repositório**. A APIKey do Gigya é chave pública de
+cliente (já consta na própria py-uconnect como `login_api_key` do `FIAT_US`).
+
+Confirmado na prática (teste de login com `FIAT_US`): a conta lista os veículos e o
+Pulse-alvo expõe estes comandos/serviços:
+- `RDL` = travar portas, `RDU` = destravar portas.
+- `VF` = localizar (atualiza GPS), `HBLF` = buzina/pisca, `REON`/`REOFF` = ligar/desligar
+  motor remotamente.
+- `location` traz latitude/longitude/altitude e carimbo de tempo.
+Walk-away usa `VF`/`location` (posição do carro) + GPS do celular + `RDL` (travar).
 
 ## Restrições e riscos
 
