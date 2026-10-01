@@ -103,7 +103,7 @@ object UconnectClient {
         val (_, body) = execute("POST", "${UconnectBrand.LOGIN_URL}/accounts.login", form(), formBody(params))
         val json = JSONObject(body)
         if (json.optInt("errorCode", -1) != 0) {
-            throw UconnectException("Login falhou: ${json.optString("errorMessage", body)}")
+            throw UconnectException("Login falhou: ${gigyaError(json)}")
         }
         return json.optJSONObject("sessionInfo")?.optString("login_token").orEmpty()
             .ifBlank { throw UconnectException("Login sem login_token.") }
@@ -117,7 +117,7 @@ object UconnectClient {
         val (_, body) = execute("POST", "${UconnectBrand.LOGIN_URL}/accounts.getJWT", form(), formBody(params))
         val json = JSONObject(body)
         if (json.optInt("errorCode", -1) != 0) {
-            throw UconnectException("getJWT falhou: ${json.optString("errorMessage", body)}")
+            throw UconnectException("getJWT falhou: ${gigyaError(json)}")
         }
         return json.optString("id_token").ifBlank { throw UconnectException("getJWT sem id_token.") }
     }
@@ -135,6 +135,13 @@ object UconnectClient {
             throw UconnectException("Troca de token incompleta. Campos recebidos: [$keys]")
         }
         return token to identityId
+    }
+
+    private fun gigyaError(json: JSONObject): String {
+        val code = json.optInt("errorCode", -1)
+        val message = json.optString("errorMessage")
+        val details = json.optString("errorDetails")
+        return listOf("código $code", message, details).filter { it.isNotBlank() }.joinToString(" · ")
     }
 
     private fun firstNonBlank(json: JSONObject, vararg names: String): String {
