@@ -15,6 +15,8 @@ abstract class VehicleDataActivity : Activity() {
 
     protected abstract val layoutId: Int
 
+    protected open val explore: Boolean = false
+
     protected abstract fun bindViews()
 
     protected abstract fun showLoading()
@@ -51,7 +53,9 @@ abstract class VehicleDataActivity : Activity() {
         showLoading()
         scope.launch {
             try {
-                showData(UconnectClient.fetchVehicleData(session, UconnectStore.vin(this@VehicleDataActivity)))
+                showData(
+                    UconnectClient.fetchVehicleData(session, UconnectStore.vin(this@VehicleDataActivity), explore),
+                )
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

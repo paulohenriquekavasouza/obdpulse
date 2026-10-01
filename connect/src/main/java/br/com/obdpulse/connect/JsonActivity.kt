@@ -10,6 +10,8 @@ class JsonActivity : VehicleDataActivity() {
 
     override val layoutId: Int = R.layout.activity_json
 
+    override val explore: Boolean = true
+
     private lateinit var message: TextView
     private lateinit var jsonText: TextView
     private var currentJson = ""

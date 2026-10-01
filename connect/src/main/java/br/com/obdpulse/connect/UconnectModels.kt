@@ -35,6 +35,7 @@ data class VehicleData(
     val remoteStatus: JSONObject?,
     val location: JSONObject?,
     val errors: Map<String, String>,
+    val extras: Map<String, JSONObject> = emptyMap(),
 )
 
 class PendingAction(

@@ -131,6 +131,24 @@ class VehicleReportTest {
     }
 
     @Test
+    fun jsonIncludesExtrasOnlyWhenPresent() {
+        val base = data()
+        assertFalse(JSONObject(VehicleJson.build(base)).has("extras"))
+
+        val withExtras = base.copy(
+            extras = linkedMapOf(
+                "vhr" to JSONObject("""{"dtc":[]}"""),
+                "status_v3" to JSONObject("""{"timestamp":1}"""),
+            ),
+            errors = mapOf("subscription" to "HTTP 404"),
+        )
+        val json = JSONObject(VehicleJson.build(withExtras))
+        assertTrue(json.getJSONObject("extras").has("vhr"))
+        assertTrue(json.getJSONObject("extras").has("status_v3"))
+        assertEquals("HTTP 404", json.getJSONObject("errors").getString("subscription"))
+    }
+
+    @Test
     fun lockStateIsReportedWhenTheApiProvidesIt() {
         val sample = data(
             remote = """{"doors":{"driver":{"status":"LOCKED"},"leftRear":{"status":"UNLOCKED"}},

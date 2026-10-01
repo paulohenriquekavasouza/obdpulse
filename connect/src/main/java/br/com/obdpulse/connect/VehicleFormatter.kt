@@ -138,6 +138,11 @@ object VehicleJson {
         root.put("status", data.status ?: JSONObject.NULL)
         root.put("remote_status", data.remoteStatus ?: JSONObject.NULL)
         root.put("location", data.location ?: JSONObject.NULL)
+        if (data.extras.isNotEmpty()) {
+            val extras = JSONObject()
+            for ((key, value) in data.extras) extras.put(key, value)
+            root.put("extras", extras)
+        }
         root.put("errors", JSONObject(data.errors))
         return root.toString(2).replace("\\/", "/")
     }
