@@ -37,7 +37,7 @@ class VehicleReportTest {
     fun parsesPanelValues() {
         val summary = VehicleParser.parse(data())
         assertEquals(7736.0, summary.odometer!!, 0.0)
-        assertEquals(22.0, summary.fuelAmount!!, 0.0)
+        assertEquals(22.0, summary.fuelLevelPercent!!, 0.0)
         assertEquals(184.0, summary.distanceToEmpty!!, 0.0)
         assertEquals(12.2, summary.batteryVoltage!!, 0.0)
         assertEquals("PULSE", summary.model)
@@ -53,7 +53,7 @@ class VehicleReportTest {
         assertFalse(report.vehicle.contains("Apelido"))
 
         assertTrue(report.panel.contains("Hodômetro: 7.736 km"))
-        assertTrue(report.panel.contains("Combustível: 22"))
+        assertTrue(report.panel.contains("Combustível: 22%"))
         assertTrue(report.panel.contains("Autonomia: 184 km"))
         assertTrue(report.panel.contains("Bateria: 12,2 V"))
 
@@ -86,8 +86,61 @@ class VehicleReportTest {
         )
         assertTrue(report.panel.contains("Hodômetro: —"))
         assertTrue(report.tires.contains("Dianteiro esquerdo: —"))
-        assertTrue(report.doors.contains("Portas: —"))
+        assertTrue(report.doors.contains("Portas · motorista: —"))
         assertTrue(report.location.contains("Posição: —"))
+    }
+
+    @Test
+    fun realPulseShapeWithStringValuesAndEmptyRemoteStatus() {
+        val status = """{"timestamp":1790864163298,"vehicleInfo":{
+            "odometer":{"odometer":{"value":"7736","unit":"km"}},
+            "tyrePressure":[
+              {"pressure":{"unit":"kPa","value":"null"},"warning":false,"type":"FL","status":"NORMAL"},
+              {"status":"NORMAL","warning":false,"pressure":{"value":"null","unit":"kPa"},"type":"FR"}],
+            "fuel":{"fuelAmount":{"unit":"l","value":"11.0"},"distanceToEmpty":{"unit":"km","value":"184"},
+                    "fuelAmountLevel":22,"isFuelLevelLow":false},
+            "batteryInfo":{"batteryStateOfCharge":"null","batteryVoltage":{"unit":"volts","value":"12.2"}}}}"""
+        val sample = data(status = status, remote = "{}")
+
+        val summary = VehicleParser.parse(sample)
+        assertEquals(7736.0, summary.odometer!!, 0.0)
+        assertEquals(184.0, summary.distanceToEmpty!!, 0.0)
+        assertEquals(12.2, summary.batteryVoltage!!, 0.0)
+        assertEquals(22.0, summary.fuelLevelPercent!!, 0.0)
+        assertEquals(11.0, summary.fuelLiters!!, 0.0)
+        assertEquals("L", summary.fuelLitersUnit)
+        assertNull(summary.tires["FL"]!!.pressure)
+        assertTrue(summary.doors.isEmpty())
+        assertNull(summary.statusTimeMs)
+
+        val report = VehicleFormatter.report(summary, utc)
+        assertTrue(report.panel.contains("Combustível: 22% (11 L)"))
+        assertTrue(report.tires.contains("Dianteiro esquerdo: —"))
+        assertTrue(report.doors.contains("Portas · motorista: —"))
+        assertTrue(report.doors.contains("Portas · traseira direita: —"))
+        assertTrue(report.doors.contains("Janelas · passageiro: —"))
+
+        val json = JSONObject(VehicleJson.build(sample)).getJSONObject("summary")
+        assertTrue(json.has("door_driver_locked"))
+        assertTrue(json.isNull("door_driver_locked"))
+        assertTrue(json.has("door_rear_right_locked"))
+        assertTrue(json.has("window_passenger_closed"))
+        assertTrue(json.isNull("window_driver_closed"))
+        assertEquals(22.0, json.getDouble("fuel_level_percent"), 0.0)
+        assertEquals(11.0, json.getDouble("fuel_liters"), 0.0)
+    }
+
+    @Test
+    fun lockStateIsReportedWhenTheApiProvidesIt() {
+        val sample = data(
+            remote = """{"doors":{"driver":{"status":"LOCKED"},"leftRear":{"status":"UNLOCKED"}},
+                "windows":{"passenger":{"status":"CLOSED"}}}""",
+        )
+        val json = JSONObject(VehicleJson.build(sample)).getJSONObject("summary")
+        assertEquals(true, json.getBoolean("door_driver_locked"))
+        assertEquals(false, json.getBoolean("door_rear_left_locked"))
+        assertTrue(json.isNull("door_passenger_locked"))
+        assertEquals(true, json.getBoolean("window_passenger_closed"))
     }
 
     @Test

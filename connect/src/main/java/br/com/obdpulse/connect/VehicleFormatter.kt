@@ -38,7 +38,7 @@ object VehicleFormatter {
 
         val panel = listOf(
             "Hodômetro: ${number(summary.odometer, summary.odometerUnit)}",
-            "Combustível: ${number(summary.fuelAmount)}",
+            "Combustível: ${fuel(summary)}",
             "Autonomia: ${number(summary.distanceToEmpty, summary.distanceUnit)}",
             "Bateria: ${number(summary.batteryVoltage, "V")}",
         ).joinToString("\n")
@@ -76,31 +76,41 @@ object VehicleFormatter {
         }
     }
 
+    private fun fuel(summary: VehicleSummary): String {
+        val level = summary.fuelLevelPercent?.let { number(it) + "%" }
+        val liters = summary.fuelLiters?.let { number(it, summary.fuelLitersUnit) }
+        return when {
+            level != null && liters != null -> "$level ($liters)"
+            level != null -> level
+            liters != null -> liters
+            else -> EMPTY
+        }
+    }
+
     private fun doors(summary: VehicleSummary): String {
-        val doors = describe("Portas", summary.doors)
-        val windows = describe("Janelas", summary.windows)
-        return "$doors\n$windows"
+        val lines = mutableListOf<String>()
+        for (position in DoorPosition.entries) {
+            lines += "Portas · ${position.label}: ${doorStatus(VehicleParser.statusAt(summary.doors, position))}"
+        }
+        for ((key, status) in VehicleParser.unmatched(summary.doors)) {
+            lines += "Portas · $key: ${doorStatus(status)}"
+        }
+        for (position in listOf(DoorPosition.DRIVER, DoorPosition.PASSENGER)) {
+            lines += "Janelas · ${position.label}: ${doorStatus(VehicleParser.statusAt(summary.windows, position))}"
+        }
+        for ((key, status) in VehicleParser.unmatched(summary.windows)) {
+            lines += "Janelas · $key: ${doorStatus(status)}"
+        }
+        return lines.joinToString("\n")
     }
 
-    private fun describe(title: String, items: Map<String, String>): String {
-        if (items.isEmpty()) return "$title: $EMPTY"
-        return items.entries.joinToString("\n") { "$title · ${doorName(it.key)}: ${doorStatus(it.value)}" }
-    }
-
-    private fun doorName(key: String): String = when (key.lowercase()) {
-        "driver", "frontleft", "front_left" -> "motorista"
-        "passenger", "frontright", "front_right" -> "passageiro"
-        "leftrear", "rearleft", "rear_left" -> "traseira esquerda"
-        "rightrear", "rearright", "rear_right" -> "traseira direita"
-        else -> key
-    }
-
-    private fun doorStatus(status: String): String = when (status.uppercase()) {
+    private fun doorStatus(status: String?): String = when (status?.uppercase()) {
+        null, "?" -> EMPTY
         "LOCKED" -> "travada"
         "UNLOCKED" -> "destravada"
         "CLOSED" -> "fechada"
         "OPEN", "OPENED" -> "aberta"
-        else -> status.lowercase()
+        else -> status.orEmpty().lowercase()
     }
 
     private fun location(summary: VehicleSummary, zone: TimeZone): String {
@@ -132,6 +142,18 @@ object VehicleJson {
         return root.toString(2).replace("\\/", "/")
     }
 
+    private fun lockedOf(status: String?): Any = when (status?.uppercase()) {
+        "LOCKED" -> true
+        "UNLOCKED" -> false
+        else -> JSONObject.NULL
+    }
+
+    private fun closedOf(status: String?): Any = when (status?.uppercase()) {
+        "CLOSED" -> true
+        "OPEN", "OPENED" -> false
+        else -> JSONObject.NULL
+    }
+
     private fun summary(s: VehicleSummary): JSONObject {
         val json = JSONObject()
         json.put("vin", s.vin ?: JSONObject.NULL)
@@ -141,7 +163,9 @@ object VehicleJson {
         json.put("year", s.year ?: JSONObject.NULL)
         json.put("odometer", s.odometer ?: JSONObject.NULL)
         json.put("odometer_unit", s.odometerUnit)
-        json.put("fuel_amount", s.fuelAmount ?: JSONObject.NULL)
+        json.put("fuel_level_percent", s.fuelLevelPercent ?: JSONObject.NULL)
+        json.put("fuel_liters", s.fuelLiters ?: JSONObject.NULL)
+        json.put("fuel_liters_unit", s.fuelLitersUnit)
         json.put("distance_to_empty", s.distanceToEmpty ?: JSONObject.NULL)
         json.put("distance_to_empty_unit", s.distanceUnit)
         json.put("battery_voltage", s.batteryVoltage ?: JSONObject.NULL)
@@ -156,8 +180,11 @@ object VehicleJson {
             )
         }
         json.put("tires", tires)
-        json.put("doors", JSONObject(s.doors))
-        json.put("windows", JSONObject(s.windows))
+        for (position in DoorPosition.entries) {
+            json.put("door_${position.jsonKey}_locked", lockedOf(VehicleParser.statusAt(s.doors, position)))
+        }
+        json.put("window_driver_closed", closedOf(VehicleParser.statusAt(s.windows, DoorPosition.DRIVER)))
+        json.put("window_passenger_closed", closedOf(VehicleParser.statusAt(s.windows, DoorPosition.PASSENGER)))
         json.put(
             "location",
             JSONObject()

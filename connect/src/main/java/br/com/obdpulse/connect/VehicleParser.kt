@@ -17,7 +17,9 @@ data class VehicleSummary(
     val year: String?,
     val odometer: Double?,
     val odometerUnit: String,
-    val fuelAmount: Double?,
+    val fuelLevelPercent: Double?,
+    val fuelLiters: Double?,
+    val fuelLitersUnit: String,
     val distanceToEmpty: Double?,
     val distanceUnit: String,
     val batteryVoltage: Double?,
@@ -32,13 +34,31 @@ data class VehicleSummary(
     val statusTimeMs: Long?,
 )
 
+enum class DoorPosition(val jsonKey: String, val label: String, val aliases: Set<String>) {
+    DRIVER("driver", "motorista", setOf("driver", "frontleft")),
+    PASSENGER("passenger", "passageiro", setOf("passenger", "frontright")),
+    REAR_LEFT("rear_left", "traseira esquerda", setOf("leftrear", "rearleft")),
+    REAR_RIGHT("rear_right", "traseira direita", setOf("rightrear", "rearright")),
+}
+
 object VehicleParser {
+
+    private fun normalize(key: String): String = key.lowercase().replace("_", "").replace("-", "")
+
+    fun statusAt(items: Map<String, String>, position: DoorPosition): String? =
+        items.entries.firstOrNull { normalize(it.key) in position.aliases }?.value
+
+    fun unmatched(items: Map<String, String>): Map<String, String> {
+        val known = DoorPosition.entries.flatMap { it.aliases }.toSet()
+        return items.filterKeys { normalize(it) !in known }
+    }
 
     fun parse(data: VehicleData): VehicleSummary {
         val entry = data.vehicle
         val info = data.status?.optJSONObject("vehicleInfo")
         val odometer = quantity(info, "odometer", "odometer")
         val distance = quantity(info, "fuel", "distanceToEmpty")
+        val liters = quantity(info, "fuel", "fuelAmount")
         val location = data.location
         return VehicleSummary(
             vin = text(entry, "vin"),
@@ -48,7 +68,9 @@ object VehicleParser {
             year = text(entry, "tsoModelYear"),
             odometer = odometer.first,
             odometerUnit = odometer.second ?: "km",
-            fuelAmount = quantity(info, "fuel", "fuelAmountLevel").first,
+            fuelLevelPercent = quantity(info, "fuel", "fuelAmountLevel").first,
+            fuelLiters = liters.first,
+            fuelLitersUnit = liters.second?.let { if (it.equals("l", ignoreCase = true)) "L" else it } ?: "L",
             distanceToEmpty = distance.first,
             distanceUnit = distance.second ?: "km",
             batteryVoltage = quantity(info, "batteryInfo", "batteryVoltage").first,
