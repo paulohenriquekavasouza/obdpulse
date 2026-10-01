@@ -56,23 +56,29 @@ Autenticação do app: **e-mail + senha + PIN** (PIN exigido para comandos).
 
 São 17 marcas, todas **EU, EUA/Canadá ou Ásia**.
 
-## Brasil / Pulse — situação
+## Brasil / Pulse — CONFIRMADO: usa a marca FIAT_US (backend sdpr-02)
 
-**Não há marca Brasil/LATAM na py-uconnect.** O backend é o FCA global (`fcagcv.com`),
-então o Pulse é **provavelmente alcançável**, mas **não confirmado**: falta a
-configuração regional do Brasil, que não é pública:
-- URL de login (Gigya) do app brasileiro;
-- URL/host da API (ex.: `sdpr-0X.fcagcv.com` ou gateway LATAM);
-- `x-api-key` e `login API key` da marca no Brasil;
-- região AWS/Cognito (provável `sa-east-1`) e `token_url`;
-- `locale` (ex.: `pt_br`).
+A captura do login web da conta brasileira mostrou o fluxo:
+- Login (Gigya): `POST https://login-us.fiat.com/accounts.login` e `/accounts.getJWT`,
+  com `APIKey=3_WfFvlZJwcSdOD0LFQCngUV3W390R4Yshpuq3RsZvnV4VG0c9Q6R0RtDwcXc8dTrI`.
+- Troca por credenciais: `POST https://authz.sdpr-02.fcagcv.com/v2/cognito/identity/token`
+  com `{"gigya_token": <JWT>}`.
+- Veículos: `GET https://channels.sdpr-02.fcagcv.com/v4/accounts/{uid}/vehicles?stage=ALL&sdp=ALL`
+  (uid = `sub` do JWT do Gigya).
 
-Como obter esses parâmetros (do SEU lado, no seu PC — não deste contêiner):
-1. Decompilar o APK do app Fiat brasileiro (ex.: `jadx`) e procurar as constantes de
-   endpoint/chaves; ou
-2. Capturar o tráfego de login do app (mitmproxy + CA próprio) — provavelmente barrado
-   por *certificate pinning*, o que pode exigir Frida/app repack.
-Com esses valores, dá para registrar uma "marca FIAT_BR" e testar login/lock/location.
+Essa APIKey e esses hosts são **idênticos aos do `FIAT_US`** da py-uconnect
+(`login_api_key` igual, `login_url=https://login-us.fiat.com`, backend `sdpr-02`).
+Conclusão: **a conta brasileira é atendida pela marca `FIAT_US`** — não há backend
+LATAM separado.
+
+Ajuste na base (py-uconnect): **nenhum para autenticar** — usar `brands.FIAT_US`.
+Opcional: registrar `FIAT_BR` = cópia de `FIAT_US` trocando só o `locale` para `pt_br`
+(cosmético; país/idioma vêm da conta). Os demais campos (`token_url`, `api`, `auth`,
+`region`, `brand_code="ALL"`) são os mesmos do `FIAT_US`.
+
+Segurança: `login_token`, `gigya_token` (JWT) e o `uid` são efêmeros/pessoais e **não
+ficam no repositório**. A APIKey do Gigya é chave pública de cliente (já consta na
+própria py-uconnect como `login_api_key` do `FIAT_US`).
 
 ## Restrições e riscos
 
@@ -115,8 +121,8 @@ Interpretação:
 
 ## Conclusão
 
-- A função (lock + localização + walk-away) é tecnicamente madura para EU/EUA/Ásia.
-- Para o **Brasil (Pulse)** é **provável, porém não confirmada**: depende de obter os
-  parâmetros regionais do app brasileiro (passo de RE no PC do usuário).
-- Próximo passo recomendado: confirmar se a conta brasileira loga no backend FCA e
-  descobrir os endpoints/chaves do Brasil antes de construir o walk-away.
+- A função (lock + localização + walk-away) é tecnicamente madura e, pela captura do
+  login, o **Brasil (Pulse) usa a marca `FIAT_US`** da py-uconnect (mesmo backend
+  `sdpr-02`). Alcançável sem backend novo.
+- Próximo passo: rodar o teste de login com `FIAT_US` (o script já tenta) para confirmar
+  na prática que lista o Pulse; depois construir o módulo de lock + walk-away.
