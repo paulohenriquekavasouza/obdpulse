@@ -26,6 +26,7 @@ import br.com.obdpulse.ObdManager
 import br.com.obdpulse.Prefs
 import br.com.obdpulse.R
 import br.com.obdpulse.obd.DtcCode
+import br.com.obdpulse.obd.Format
 import br.com.obdpulse.obd.Keys
 import br.com.obdpulse.obd.Labels
 import br.com.obdpulse.obd.ObdState
@@ -104,9 +105,37 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.open_records).setOnClickListener { startActivity(Intent(this, RecordsActivity::class.java)) }
         findViewById<Button>(R.id.open_trip).setOnClickListener { startActivity(Intent(this, TripActivity::class.java)) }
         findViewById<Button>(R.id.open_graph).setOnClickListener { startActivity(Intent(this, GraphActivity::class.java)) }
+        findViewById<Button>(R.id.open_trips).setOnClickListener { startActivity(Intent(this, TripsActivity::class.java)) }
         setupClusterSpinner()
+        setupRefreshSpinner()
         ensurePermissions()
         handleSearch(intent)
+    }
+
+    private fun setupRefreshSpinner() {
+        val spinner = findViewById<Spinner>(R.id.refresh_interval)
+        val options = Prefs.REFRESH_OPTIONS_MS
+        spinner.adapter = ArrayAdapter(
+            this, android.R.layout.simple_spinner_dropdown_item, options.map(::refreshLabel),
+        )
+        val current = Prefs.refreshMs(this)
+        spinner.setSelection(
+            options.indexOf(current).takeIf { it >= 0 } ?: options.indexOfFirst { it >= current }.coerceAtLeast(0),
+        )
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                options.getOrNull(position)?.let {
+                    if (it != Prefs.refreshMs(this@MainActivity)) Prefs.saveRefreshMs(this@MainActivity, it)
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+    }
+
+    private fun refreshLabel(ms: Long): String {
+        val seconds = Format.number(ms / 1000.0, if (ms % 1000L == 0L) 0 else 1)
+        return if (ms == Prefs.MIN_REFRESH_MS) getString(R.string.refresh_min_label, seconds) else "$seconds s"
     }
 
     private fun setupClusterSpinner() {
@@ -142,7 +171,7 @@ class MainActivity : Activity() {
         clusterListener = Prefs.observe(this) { key ->
             if (key == Prefs.KEY_CLUSTER) runOnUiThread { syncClusterSelection() }
         }
-        stateJob = scope.launch { ObdManager.state.collect(::render) }
+        stateJob = scope.launch { ObdManager.state.collectThrottled(this@MainActivity, ::render) }
     }
 
     override fun onStop() {

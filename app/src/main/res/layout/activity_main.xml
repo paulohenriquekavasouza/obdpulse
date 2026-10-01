@@ -151,14 +151,31 @@
                     android:layout_weight="1"
                     android:text="@string/open_trip" />
 
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:baselineAligned="false"
+                android:orientation="horizontal">
+
                 <Button
                     android:id="@+id/open_graph"
                     style="@style/Button.Secondary"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
                     android:layout_weight="1"
                     android:text="@string/open_graph" />
+
+                <Button
+                    android:id="@+id/open_trips"
+                    style="@style/Button.Secondary"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/open_trips" />
             </LinearLayout>
         </LinearLayout>
 
@@ -239,6 +256,34 @@
 
             <Spinner
                 android:id="@+id/cluster_metric"
+                style="@style/Field"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp">
+
+            <TextView
+                style="@style/SectionLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/section_refresh" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/refresh_hint"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+
+            <Spinner
+                android:id="@+id/refresh_interval"
                 style="@style/Field"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

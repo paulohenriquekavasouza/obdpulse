@@ -38,7 +38,7 @@ class TripActivity : Activity() {
 
     override fun onStart() {
         super.onStart()
-        job = scope.launch { ObdManager.state.collect(::render) }
+        job = scope.launch { ObdManager.state.collectThrottled(this@TripActivity, ::render) }
     }
 
     override fun onStop() {

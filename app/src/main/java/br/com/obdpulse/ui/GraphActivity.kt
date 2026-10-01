@@ -38,7 +38,7 @@ class GraphActivity : Activity() {
 
     override fun onStart() {
         super.onStart()
-        job = scope.launch { ObdManager.state.collect(::render) }
+        job = scope.launch { ObdManager.state.collectThrottled(this@GraphActivity, ::render) }
     }
 
     override fun onStop() {

@@ -27,6 +27,10 @@ object Prefs {
     private const val KEY_REC_VMAX = "rec_vmax"
     private const val KEY_REC_RPM = "rec_rpm"
     private const val KEY_REC_BOOST = "rec_boost"
+    private const val KEY_REFRESH = "refresh_ms"
+    const val MIN_REFRESH_MS = 200L
+    const val DEFAULT_REFRESH_MS = 200L
+    val REFRESH_OPTIONS_MS = listOf(200L, 500L, 1_000L, 2_000L, 5_000L)
     const val CLUSTER_NONE = ""
     const val DEFAULT_TANK = 47.0f
     const val DEFAULT_FUEL_PRICE = 5.89f
@@ -132,5 +136,12 @@ object Prefs {
         prefs(context).edit {
             remove(KEY_REC_0100); remove(KEY_REC_VMAX); remove(KEY_REC_RPM); remove(KEY_REC_BOOST)
         }
+    }
+
+    fun refreshMs(context: Context): Long =
+        prefs(context).getLong(KEY_REFRESH, DEFAULT_REFRESH_MS).coerceAtLeast(MIN_REFRESH_MS)
+
+    fun saveRefreshMs(context: Context, value: Long) {
+        prefs(context).edit { putLong(KEY_REFRESH, value.coerceAtLeast(MIN_REFRESH_MS)) }
     }
 }

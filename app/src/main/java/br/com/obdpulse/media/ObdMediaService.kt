@@ -156,7 +156,7 @@ class ObdMediaService : MediaBrowserService() {
     private fun scheduleRender() {
         if (renderPending) return
         renderPending = true
-        val wait = (lastRender + RENDER_INTERVAL - SystemClock.elapsedRealtime()).coerceAtLeast(0)
+        val wait = (lastRender + Prefs.refreshMs(this) - SystemClock.elapsedRealtime()).coerceAtLeast(0)
         scope.launch {
             delay(wait)
             renderPending = false
@@ -190,7 +190,7 @@ class ObdMediaService : MediaBrowserService() {
 
         val dtcChanged = state.dtcReadCount != lastDtcReads || state.dtcLoading != lastDtcLoading
         val statusChanged = state.status != lastStatus
-        if (statusChanged || lastRender - lastChildren >= CHILDREN_INTERVAL) {
+        if (statusChanged || lastRender - lastChildren >= maxOf(CHILDREN_MIN_MS, Prefs.refreshMs(this))) {
             lastChildren = lastRender
             notifyChildrenChanged(MediaContent.DASHBOARD)
             notifyChildrenChanged(MediaContent.PERFORMANCE)
@@ -268,8 +268,7 @@ class ObdMediaService : MediaBrowserService() {
         const val TITLE = "OBD Pulse"
         val TRANSPORT_ACTIONS = PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or
             PlaybackState.ACTION_PLAY_FROM_MEDIA_ID or PlaybackState.ACTION_PLAY_FROM_SEARCH
-        const val RENDER_INTERVAL = 200L
-        const val CHILDREN_INTERVAL = 1_000L
+        const val CHILDREN_MIN_MS = 1_000L
         const val FLASH_MS = 6_000L
         const val ROTATE_MS = 3_000L
         const val CONTENT_STYLE_SUPPORTED = "android.media.browse.CONTENT_STYLE_SUPPORTED"

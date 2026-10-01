@@ -36,7 +36,7 @@ class RecordsActivity : Activity() {
     override fun onStart() {
         super.onStart()
         job = scope.launch {
-            ObdManager.state.collect {
+            ObdManager.state.collectThrottled(this@RecordsActivity) {
                 renderSession(it.trip)
                 renderAllTime()
             }

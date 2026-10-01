@@ -69,10 +69,13 @@ Versões: AGP 8.13.2, Kotlin 2.2.21, Gradle 8.14.5, compileSdk/targetSdk 36 e mi
 
 Com **Conectar automaticamente** marcado (padrão), o app conecta sozinho ao leitor salvo ao abrir a tela do celular ou ao entrar no Android Auto, sem precisar tocar em Conectar/Play.
 
-Três telas adicionais no celular:
+Quatro telas adicionais no celular:
 - **Recordes:** melhores marcas da sessão atual e do histórico (melhor 0–100, velocidade, rotação e turbo máximos), com botão para zerar o histórico.
 - **Computador de bordo:** distância, combustível usado, custo estimado (pelo preço do litro), consumo médio, autonomia estimada (pelo nível do tanque) e nota de condução. O preço do combustível e o volume do tanque são configuráveis.
 - **Gráfico ao vivo:** curva em tempo real de qualquer parâmetro lido, selecionável no topo.
+- **Viagens:** histórico persistente. Cada conexão vira uma viagem, salva ao desconectar (e a cada 30 s, para não perder dados se o app fechar), desde que tenha passado de 0,3 km. A tela mostra o resumo geral (distância, combustível, custo, consumo médio ponderado e nota média), um **gráfico do consumo (km/L) por viagem** e a lista das viagens, com detalhes e exclusão. Guarda as últimas 500 viagens.
+
+**Intervalo de atualização:** o cartão *Atualização* da tela principal define de quanto em quanto tempo as informações são redesenhadas no app e no Android Auto (0,2 s, 0,5 s, 1 s, 2 s ou 5 s). O padrão e o mínimo são 0,2 s: abaixo disso não há ganho, porque o adaptador ELM327 entrega poucas leituras por segundo, e redesenhar a imagem do velocímetro com mais frequência sobrecarregaria o Android Auto. As listas do Android Auto nunca atualizam em menos de 1 s, para não reiniciar a rolagem. A leitura do carro continua no ritmo máximo do adaptador; a opção só controla a apresentação.
 
 ## Android Auto
 

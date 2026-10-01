@@ -10,6 +10,8 @@ import br.com.obdpulse.obd.ObdEngine
 import br.com.obdpulse.obd.ObdException
 import br.com.obdpulse.obd.ObdState
 import br.com.obdpulse.obd.ObdStatus
+import br.com.obdpulse.trips.FileTripStore
+import br.com.obdpulse.trips.TripRecorder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -75,6 +77,7 @@ object ObdManager {
     private suspend fun runSession(context: Context, address: String) {
         var opened: BluetoothLink? = null
         var session: ObdEngine? = null
+        val recorder = TripRecorder(FileTripStore(context))
         try {
             val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter
                 ?: throw ObdException("Este aparelho não tem Bluetooth.")
@@ -94,6 +97,9 @@ object ObdManager {
                         if (isActive) {
                             _state.value = it
                             Prefs.updateRecords(context, it.trip)
+                            runCatching {
+                                recorder.onState(it, System.currentTimeMillis(), Prefs.fuelPrice(context).toDouble())
+                            }
                         }
                     }
                 }
@@ -110,6 +116,7 @@ object ObdManager {
         } catch (e: Throwable) {
             _state.update { it.copy(status = ObdStatus.ERROR, message = describe(e)) }
         } finally {
+            runCatching { recorder.finish(System.currentTimeMillis()) }
             opened?.close()
             clearIfCurrent(opened, session)
         }
