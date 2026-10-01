@@ -1,8 +1,11 @@
-package br.com.obdpulse.uconnect
+package br.com.obdpulse.connect
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.net.CookieHandler
+import java.net.CookieManager
+import java.net.CookiePolicy
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -16,6 +19,8 @@ object UconnectClient {
     const val CMD_LOCATE = "VF"
 
     suspend fun login(email: String, password: String): UconnectSession = withContext(Dispatchers.IO) {
+        CookieHandler.setDefault(CookieManager(null, CookiePolicy.ACCEPT_ALL))
+        bootstrap()
         val loginToken = gigyaLogin(email, password)
         val idToken = gigyaJwt(loginToken)
         val uid = subjectOf(idToken)
@@ -73,37 +78,43 @@ object UconnectClient {
             if (code !in 200..299) throw UconnectException("Comando $name falhou ($code): $resp")
         }
 
+    private fun bootstrap() {
+        val url = "${UconnectBrand.LOGIN_URL}/accounts.webSdkBootstrap?apiKey=${enc(UconnectBrand.LOGIN_API_KEY)}"
+        execute("GET", url, emptyMap(), null)
+    }
+
+    private fun defaultParams(): MutableMap<String, String> = mutableMapOf(
+        "targetEnv" to "jssdk",
+        "loginMode" to "standard",
+        "sdk" to "js_latest",
+        "authMode" to "cookie",
+        "sdkBuild" to "12234",
+        "format" to "json",
+        "APIKey" to UconnectBrand.LOGIN_API_KEY,
+    )
+
     private fun gigyaLogin(email: String, password: String): String {
-        val params = mapOf(
-            "loginID" to email,
-            "password" to password,
-            "APIKey" to UconnectBrand.LOGIN_API_KEY,
-            "sessionExpiration" to "86400",
-            "include" to "profile,data",
-            "includeUserInfo" to "true",
-            "loginMode" to "standard",
-            "targetEnv" to "jssdk",
-            "sdk" to "js_latest",
-            "format" to "json",
-        )
-        val (_, body) = execute("POST", "${UconnectBrand.LOGIN_URL}/accounts.login", form(params), formBody(params))
+        val params = defaultParams().apply {
+            put("loginID", email)
+            put("password", password)
+            put("sessionExpiration", "300")
+            put("include", "profile,data,emails,subscriptions,preferences")
+        }
+        val (_, body) = execute("POST", "${UconnectBrand.LOGIN_URL}/accounts.login", form(), formBody(params))
         val json = JSONObject(body)
         if (json.optInt("errorCode", -1) != 0) {
             throw UconnectException("Login falhou: ${json.optString("errorMessage", body)}")
         }
-        val session = json.optJSONObject("sessionInfo")
-        return session?.optString("login_token").orEmpty().ifBlank { json.optString("login_token") }
+        return json.optJSONObject("sessionInfo")?.optString("login_token").orEmpty()
             .ifBlank { throw UconnectException("Login sem login_token.") }
     }
 
     private fun gigyaJwt(loginToken: String): String {
-        val params = mapOf(
-            "APIKey" to UconnectBrand.LOGIN_API_KEY,
-            "login_token" to loginToken,
-            "fields" to "profile.firstName,profile.lastName,profile.email,country,locale",
-            "format" to "json",
-        )
-        val (_, body) = execute("POST", "${UconnectBrand.LOGIN_URL}/accounts.getJWT", form(params), formBody(params))
+        val params = defaultParams().apply {
+            put("login_token", loginToken)
+            put("fields", "profile.firstName,profile.lastName,profile.email,country,locale,data.disclaimerCodeGSDP")
+        }
+        val (_, body) = execute("POST", "${UconnectBrand.LOGIN_URL}/accounts.getJWT", form(), formBody(params))
         val json = JSONObject(body)
         if (json.optInt("errorCode", -1) != 0) {
             throw UconnectException("getJWT falhou: ${json.optString("errorMessage", body)}")
@@ -173,6 +184,7 @@ object UconnectClient {
             requestMethod = method
             connectTimeout = 20_000
             readTimeout = 20_000
+            instanceFollowRedirects = true
             headers.forEach { (k, v) -> setRequestProperty(k, v) }
             if (body != null) {
                 doOutput = true
@@ -186,12 +198,12 @@ object UconnectClient {
         return code to text
     }
 
-    private fun form(params: Map<String, String>) = mapOf("content-type" to "application/x-www-form-urlencoded")
+    private fun form() = mapOf("content-type" to "application/x-www-form-urlencoded")
 
     private fun formBody(params: Map<String, String>): ByteArray =
-        params.entries.joinToString("&") {
-            "${URLEncoder.encode(it.key, "UTF-8")}=${URLEncoder.encode(it.value, "UTF-8")}"
-        }.toByteArray(Charsets.UTF_8)
+        params.entries.joinToString("&") { "${enc(it.key)}=${enc(it.value)}" }.toByteArray(Charsets.UTF_8)
+
+    private fun enc(value: String): String = URLEncoder.encode(value, "UTF-8")
 
     private fun subjectOf(jwt: String): String {
         val parts = jwt.split(".")

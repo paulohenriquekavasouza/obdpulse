@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "ObdPulse"
 include(":app")
+include(":connect")

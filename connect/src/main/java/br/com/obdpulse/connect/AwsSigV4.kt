@@ -1,4 +1,4 @@
-package br.com.obdpulse.uconnect
+package br.com.obdpulse.connect
 
 import java.net.URL
 import java.security.MessageDigest

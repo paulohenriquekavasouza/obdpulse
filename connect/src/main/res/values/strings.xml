@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Pulse Connect</string>
+
+    <string name="uconnect_title">Pulse Connect</string>
+    <string name="uconnect_subtitle">Controle remoto pela conta Fiat/Uconnect. Usa a sua conta; as credenciais ficam só neste aparelho.</string>
+    <string name="uconnect_account">Conta</string>
+    <string name="uconnect_email_hint">E-mail</string>
+    <string name="uconnect_password_hint">Senha</string>
+    <string name="uconnect_pin_hint">PIN (para comandos)</string>
+    <string name="uconnect_save">Salvar neste aparelho</string>
+    <string name="uconnect_connect">Conectar</string>
+    <string name="uconnect_vehicle">Veículo</string>
+    <string name="uconnect_lock">Travar</string>
+    <string name="uconnect_unlock">Destravar</string>
+    <string name="uconnect_locate">Localizar</string>
+    <string name="uconnect_status_idle">Desconectado.</string>
+    <string name="uconnect_status_connecting">Conectando à conta…</string>
+    <string name="uconnect_status_connected">Conectado · %1$d veículo(s).</string>
+    <string name="uconnect_status_no_vehicles">Conectado, mas nenhum veículo na conta.</string>
+    <string name="uconnect_status_error">Erro: %1$s</string>
+    <string name="uconnect_status_ok">Pronto.</string>
+    <string name="uconnect_location">%1$s\nLocalização: %2$s, %3$s</string>
+    <string name="uconnect_locking">Enviando travamento…</string>
+    <string name="uconnect_unlocking">Enviando destravamento…</string>
+    <string name="uconnect_locating">Localizando…</string>
+    <string name="uconnect_command_sent">Comando enviado ao veículo.</string>
+    <string name="uconnect_need_credentials">Informe e-mail e senha.</string>
+    <string name="uconnect_need_pin">Informe o PIN para enviar comandos.</string>
+</resources>

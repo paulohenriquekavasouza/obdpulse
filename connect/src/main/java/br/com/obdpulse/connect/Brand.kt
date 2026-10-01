@@ -1,4 +1,4 @@
-package br.com.obdpulse.uconnect
+package br.com.obdpulse.connect
 
 object UconnectBrand {
     const val LOGIN_URL = "https://login-us.fiat.com"

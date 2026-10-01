@@ -1,4 +1,4 @@
-package br.com.obdpulse.ui
+package br.com.obdpulse.connect
 
 import android.app.Activity
 import android.os.Bundle
@@ -11,17 +11,12 @@ import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
-import br.com.obdpulse.R
-import br.com.obdpulse.obd.Format
-import br.com.obdpulse.uconnect.UconnectClient
-import br.com.obdpulse.uconnect.UconnectSession
-import br.com.obdpulse.uconnect.UconnectStore
-import br.com.obdpulse.uconnect.UconnectVehicle
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import java.util.Locale
 
-class UconnectActivity : Activity() {
+class MainActivity : Activity() {
 
     private val scope = MainScope()
 
@@ -42,7 +37,7 @@ class UconnectActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_uconnect)
+        setContentView(R.layout.activity_main)
         email = findViewById(R.id.uconnect_email)
         password = findViewById(R.id.uconnect_password)
         pin = findViewById(R.id.uconnect_pin)
@@ -113,7 +108,7 @@ class UconnectActivity : Activity() {
         vehicleSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 selectedVehicle()?.let {
-                    UconnectStore.saveVin(this@UconnectActivity, it.vin)
+                    UconnectStore.saveVin(this@MainActivity, it.vin)
                     info.text = it.label
                     loadLocation(it)
                 }
@@ -121,10 +116,7 @@ class UconnectActivity : Activity() {
 
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
-        val commandsEnabled = session != null
-        lock.isEnabled = commandsEnabled
-        unlock.isEnabled = commandsEnabled
-        locate.isEnabled = commandsEnabled
+        setBusy(false)
     }
 
     private fun selectedVehicle(): UconnectVehicle? = vehicles.getOrNull(vehicleSpinner.selectedItemPosition)
@@ -134,16 +126,7 @@ class UconnectActivity : Activity() {
         scope.launch {
             try {
                 val location = UconnectClient.location(current, vehicle.vin)
-                info.text = if (location == null) {
-                    vehicle.label
-                } else {
-                    getString(
-                        R.string.uconnect_location,
-                        vehicle.label,
-                        Format.number(location.latitude, 5),
-                        Format.number(location.longitude, 5),
-                    )
-                }
+                info.text = locationText(vehicle, location)
             } catch (e: Exception) {
                 info.text = getString(R.string.uconnect_status_error, e.message.orEmpty())
             }
@@ -186,16 +169,7 @@ class UconnectActivity : Activity() {
                     UconnectClient.command(current, vehicle.vin, UconnectClient.CMD_LOCATE, pinAuth)
                 }
                 val location = UconnectClient.location(current, vehicle.vin)
-                info.text = if (location == null) {
-                    vehicle.label
-                } else {
-                    getString(
-                        R.string.uconnect_location,
-                        vehicle.label,
-                        Format.number(location.latitude, 5),
-                        Format.number(location.longitude, 5),
-                    )
-                }
+                info.text = locationText(vehicle, location)
                 status.setText(R.string.uconnect_status_ok)
             } catch (e: Exception) {
                 status.text = getString(R.string.uconnect_status_error, e.message.orEmpty())
@@ -203,6 +177,16 @@ class UconnectActivity : Activity() {
                 setBusy(false)
             }
         }
+    }
+
+    private fun locationText(vehicle: UconnectVehicle, location: VehicleLocation?): String {
+        if (location == null) return vehicle.label
+        return getString(
+            R.string.uconnect_location,
+            vehicle.label,
+            String.format(Locale.US, "%.5f", location.latitude),
+            String.format(Locale.US, "%.5f", location.longitude),
+        )
     }
 
     private fun setBusy(busy: Boolean) {

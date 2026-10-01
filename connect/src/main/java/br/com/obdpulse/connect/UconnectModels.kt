@@ -1,4 +1,4 @@
-package br.com.obdpulse.uconnect
+package br.com.obdpulse.connect
 
 data class UconnectVehicle(
     val vin: String,
